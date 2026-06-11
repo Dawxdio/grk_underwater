@@ -1,2 +1,4 @@
 .vs/
 glfw-3.4.bin.WIN64/
+x64/
+Project1.vcxproj
