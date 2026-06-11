@@ -113,12 +113,12 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalUsingDirectories>C:\Users\Kostek\source\repos\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalBMIDirectories>C:\Users\Kostek\source\repos\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalBMIDirectories)</AdditionalBMIDirectories>
-      <AdditionalIncludeDirectories>D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Kostek\source\repos\grk_underwater\Project1\glfw-3.4.bin.WIN64\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\glfw-3.4.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\Kostek\source\repos\grk_underwater\Project1\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;
 opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -137,12 +137,12 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalUsingDirectories>C:\Users\Kostek\source\repos\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalBMIDirectories>C:\Users\Kostek\source\repos\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalBMIDirectories)</AdditionalBMIDirectories>
-      <AdditionalIncludeDirectories>C:\Users\Kostek\source\repos\grk_underwater\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Kostek\source\repos\grk_underwater\Project1\glfw-3.4.bin.WIN64\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Kostek\source\repos\grk_underwater\Project1\glfw-3.4.bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\Kostek\source\repos\grk_underwater\Project1\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;
 opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
