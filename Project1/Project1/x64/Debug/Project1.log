@@ -1,9 +1,4 @@
 ﻿  main.cpp
-<<<<<<< HEAD
-D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\Project1\main.cpp(110,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
-  Project1.vcxproj -> D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\x64\Debug\Project1.exe
-=======
-  LINK : nie znaleziono elementu C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\Project1.exe ani nie został on skompilowany podczas ostatniego konsolidowania przyrostowego; zostanie wykonana pełna konsolidacja
+C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\Project1\main.cpp(110,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
 LINK : warning LNK4098: domyślna biblioteka „MSVCRT” powoduje konflikt z innymi bibliotekami; użyj opcji /NODEFAULTLIB:biblioteka
-  Project1.vcxproj -> C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\Project1.exe
->>>>>>> f3cd965153ec8a2f33d63bfe68a406f08ce8ff61
+  Project1.vcxproj -> C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\x64\Debug\Project1.exe
