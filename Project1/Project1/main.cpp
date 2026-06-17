@@ -4,6 +4,9 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -198,6 +201,65 @@ void generate_coral(int coral_type) {
     }
 }
 
+// Camera position
+glm::vec3 cameraPos = glm::vec3(0.0f, 2.0f, 5.0f);  // Pozycja kamery
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // Wektor patrzenia (zaktualizowany przez Q/E)
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);  // Wektor "w górę"
+
+// Camera rotation angles (starting at -90 degrees to look straight ahead)
+float yaw = -90.0f; // -90 stopni patrzy wprost w głąb ekranu (oś -Z)
+
+float movementSpeed = 0.05f;
+float rotationSpeed = 1.0f;
+// Look direction vector
+void updateCameraVectors() {
+    glm::vec3 front;
+    // Wyliczamy nowy kierunek na płaszczyźnie XZ (zakładamy stałą wysokość Y)
+    front.x = cos(glm::radians(yaw));
+    front.y = 0.0f; // Zablokowane Y, żeby kamera nie "latała" w górę/dół przy obrocie
+    front.z = sin(glm::radians(yaw));
+
+    cameraFront = glm::normalize(front);
+}
+void processInput(GLFWwindow* window) {
+    // --- OBRÓT KAMERY (Q / E) ---
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        yaw -= rotationSpeed;
+        updateCameraVectors();
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        yaw += rotationSpeed;
+        updateCameraVectors();
+    }
+
+    // --- RUCH KAMERY (W / A / S / D) ---
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        cameraPos += movementSpeed * cameraFront;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        cameraPos -= movementSpeed * cameraFront;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * movementSpeed;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * movementSpeed;
+    }
+
+    // --- RUCH GÓRA / DÓŁ (SPACJA / C) ---
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        cameraPos += movementSpeed * cameraUp; // Ruch w górę
+    }
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        cameraPos -= movementSpeed * cameraUp; // Ruch w dół
+    }
+}
+
+// Funkcja generująca macierz widoku (View Matrix) dla OpenGL
+glm::mat4 getViewMatrix() {
+    // glm::lookAt(pozycja_kamery, punkt_na_który_się_patrzy, wektor_góry)
+    return glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+}
 int main() {
     // Initialize the library
     if (!glfwInit()) {
@@ -218,67 +280,33 @@ int main() {
 
 	generate_coral(0);
 
-    // Kamera
-    float camX = 0.0f;
-    float camY = 2.0f;
-    float camZ = 5.0f;
-
-    float yaw = 0.0f;
-
     // Delta time
     float lastTime = (float)glfwGetTime();
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
 
+
+		processInput(window);
         // Obliczanie czasu klatki
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        float moveSpeed = 3.0f * deltaTime;
-        float rotSpeed = 2.0f * deltaTime;
+        if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS)
+            generate_coral(0);
 
-        // Obrót kamery
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-            yaw += rotSpeed;
+		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+			generate_coral(1);
 
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-            yaw -= rotSpeed;
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+            generate_coral(2);
 
-        // Kierunek patrzenia
-        float dirX = sin(yaw);
-        float dirZ = -cos(yaw);
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+            generate_coral(3);
 
-        // WASD
-
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            camX += dirX * moveSpeed;
-            camZ += dirZ * moveSpeed;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            camX -= dirX * moveSpeed;
-            camZ -= dirZ * moveSpeed;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            camX += dirZ * moveSpeed;
-            camZ -= dirX * moveSpeed;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            camX -= dirZ * moveSpeed;
-            camZ += dirX * moveSpeed;
-        }
-
-        // Góra / dół
-
-        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-            camY += moveSpeed;
-
-        if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-            camY -= moveSpeed;
+		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+			generate_coral(4);
 
         // Włączamy bufor głębokości
         glEnable(GL_DEPTH_TEST);
@@ -320,19 +348,8 @@ int main() {
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
 
-        glRotatef(
-            -yaw * 180.0f / (float)M_PI,
-            0.0f,
-            1.0f,
-            0.0f
-        );
-
-        glTranslatef(
-            -camX,
-            -camY,
-            -camZ
-        );
-
+        glm::mat4 viewMatrix = getViewMatrix();
+        glLoadMatrixf(&viewMatrix[0][0]);
         // Powierzchnia wody (duży kwadrat)
 
         glColor3f(0.0f, 0.3f, 0.8f);
