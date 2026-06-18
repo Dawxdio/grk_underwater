@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
 #include <chrono>
+#include "movement.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -242,63 +243,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 }
 
 
-// Camera position
-glm::vec3 cameraPos = glm::vec3(0.0f, 2.0f, 5.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-float yaw = -90.0f;
-
-float movementSpeed = 0.02f;
-float rotationSpeed = 0.50f;
-// Look direction vector
-void updateCameraVectors() {
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw));
-    front.y = 0.0f;
-    front.z = sin(glm::radians(yaw));
-
-    cameraFront = glm::normalize(front);
-}
-void processInput(GLFWwindow* window) {
-    // --- OBRÓT KAMERY (Q / E) ---
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-        yaw -= rotationSpeed;
-        updateCameraVectors();
-    }
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-        yaw += rotationSpeed;
-        updateCameraVectors();
-    }
-
-    // --- RUCH KAMERY (W / A / S / D) ---
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        cameraPos += movementSpeed * cameraFront;
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        cameraPos -= movementSpeed * cameraFront;
-    }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * movementSpeed;
-    }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * movementSpeed;
-    }
-
-    // --- RUCH GÓRA / DÓŁ (SPACJA / C) ---
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        cameraPos += movementSpeed * cameraUp; // Ruch w górę
-    }
-    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        cameraPos -= movementSpeed * cameraUp; // Ruch w dół
-    }
-}
-
-// Funkcja generująca macierz widoku (View Matrix) dla OpenGL
-glm::mat4 getViewMatrix() {
-    // glm::lookAt(pozycja_kamery, punkt_na_który_się_patrzy, wektor_góry)
-    return glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-}
+// Movement implementation moved to movement.h / movement.cpp
 
 // Generacja podłogi
 float bottomHeight(float x, float z)
@@ -442,12 +387,37 @@ int main() {
     int typ_korala1 = 4;
 
     generate_coral_reef(min_obszar1, max_obszar1, gestosc1, typ_korala1);
+
+
     glm::vec2 min_obszar2(-15.0f, -15.0f);
     glm::vec2 max_obszar2(-5.0f, -5.0f);
     float gestosc2 = 0.15f;
     int typ_korala2 = 2;
 
     generate_coral_reef(min_obszar2, max_obszar2, gestosc2, typ_korala2);
+
+    glm::vec2 min_obszar3(5.0f, 5.0f);
+    glm::vec2 max_obszar3(15.0f, 15.0f);
+    float gestosc3 = 0.15f;
+    int typ_korala3 = 3;
+
+    generate_coral_reef(min_obszar3, max_obszar3, gestosc3, typ_korala3);
+
+    glm::vec2 min_obszar4(-15.0f, 5.0f);
+    glm::vec2 max_obszar4(-5.0f, 15.0f);
+    float gestosc4 = 0.15f;
+    int typ_korala4 = 1;
+
+    generate_coral_reef(min_obszar4, max_obszar4, gestosc4, typ_korala4);
+
+    glm::vec2 min_obszar5(5.0f, -15.0f);
+    glm::vec2 max_obszar5(15.0f, -5.0f);
+    float gestosc5 = 0.15f;
+    int typ_korala5 = 1;
+
+    generate_coral_reef(min_obszar5, max_obszar5, gestosc5, typ_korala5);
+
+
     std::cout << "Liczba korali w coralReef: " << coralReef.size() << std::endl;
 
     for (size_t i = 0; i < coralReef.size(); ++i) {
