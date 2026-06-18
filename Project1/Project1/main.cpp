@@ -40,13 +40,24 @@ struct CoralConfig {
 std::vector<Node> coralNodes;
 CoralConfig currentConfig;
 
+struct CoralInstance {
+    std::vector<Node> nodes;
+    CoralConfig config;
+    glm::vec3 position; // Miejsce na dnie (X, Y z bottomHeight, Z)
+    float rotationY;
+};
+
+// Globalna lista wszystkich korali na scenie
+std::vector<CoralInstance> coralReef;
+
 // --- Space Colonization Generation Function ---
-void generate_coral(int coral_type) {
+CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
+    CoralInstance coral;
+    coral.position = start_pos;
     coralNodes.clear();
     std::vector<Attractor> attractors;
 
     // Seed random number generator
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // Define structural presets mimicking the reference profiles
     switch (coral_type) {
@@ -107,6 +118,7 @@ void generate_coral(int coral_type) {
 
     // Initialize root node at the coordinate origin on the floor
     Node root = { 0.0f, 0.0f, -1, 0.0f, 0.0f, 0 };
+    coral.nodes.push_back(root); // Dla zwracanego obiektu
     coralNodes.push_back(root);
 
     bool growing = true;
@@ -199,24 +211,26 @@ void generate_coral(int coral_type) {
             }
         }
     }
+    coral.nodes = coralNodes;
+    coral.config = currentConfig;
+	return coral;
 }
 
-// Camera position
-glm::vec3 cameraPos = glm::vec3(0.0f, 2.0f, 5.0f);  // Pozycja kamery
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // Wektor patrzenia (zaktualizowany przez Q/E)
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);  // Wektor "w górę"
 
-// Camera rotation angles (starting at -90 degrees to look straight ahead)
-float yaw = -90.0f; // -90 stopni patrzy wprost w głąb ekranu (oś -Z)
+// Camera position
+glm::vec3 cameraPos = glm::vec3(0.0f, 2.0f, 5.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float yaw = -90.0f;
 
 float movementSpeed = 0.05f;
 float rotationSpeed = 1.0f;
 // Look direction vector
 void updateCameraVectors() {
     glm::vec3 front;
-    // Wyliczamy nowy kierunek na płaszczyźnie XZ (zakładamy stałą wysokość Y)
     front.x = cos(glm::radians(yaw));
-    front.y = 0.0f; // Zablokowane Y, żeby kamera nie "latała" w górę/dół przy obrocie
+    front.y = 0.0f;
     front.z = sin(glm::radians(yaw));
 
     cameraFront = glm::normalize(front);
@@ -353,8 +367,29 @@ void generate_floor()
     }
 }
 
+void generate_coral_reef(glm::vec2 min_bound, glm::vec2 max_bound, float density, int coral_type) {
+    // Przelicz gęstość na realną liczbę korali w danym obszarze
+    float area = (max_bound.x - min_bound.x) * (max_bound.y - min_bound.y);
+    int number_of_corals = static_cast<int>(area * density * 0.5f); // Współczynnik dopasowania
+
+    for (int i = 0; i < number_of_corals; ++i) {
+        // 1. Wylosuj pozycję X i Z wewnątrz zadanego kwadratu
+        float x = min_bound.x + (rand() / (float)RAND_MAX) * (max_bound.x - min_bound.x);
+        float z = min_bound.y + (rand() / (float)RAND_MAX) * (max_bound.y - min_bound.y);
+
+        // 2. Pobierz wysokość dna w tym miejscu, żeby koral nie wisiał w powietrzu
+        float y = bottomHeight(x, z);
+
+        // 3. Wygeneruj koral i dodaj do rafy
+        CoralInstance new_coral = generate_single_coral(coral_type, glm::vec3(x, y, z));
+        new_coral.rotationY = (rand() / (float)RAND_MAX) * 360.0f;
+        coralReef.push_back(new_coral);
+    }
+}
 
 int main() {
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
     // Initialize the library
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -372,8 +407,30 @@ int main() {
     // Make the window's context current
     glfwMakeContextCurrent(window);
 
-	generate_coral(0);
+	generate_single_coral(0, glm::vec3(0.0f, 0.0f, 0.0f));
 
+    glm::vec2 min_obszar1(-5.0f, -5.0f);
+    glm::vec2 max_obszar1(5.0f, 5.0f);
+    float gestosc1 = 0.7f;
+    int typ_korala1 = 4;
+
+    generate_coral_reef(min_obszar1, max_obszar1, gestosc1, typ_korala1);
+    glm::vec2 min_obszar2(-15.0f, -15.0f);
+    glm::vec2 max_obszar2(-5.0f, -5.0f);
+    float gestosc2 = 0.3f;
+    int typ_korala2 = 2;
+
+    generate_coral_reef(min_obszar2, max_obszar2, gestosc2, typ_korala2);
+    std::cout << "Liczba korali w coralReef: " << coralReef.size() << std::endl;
+
+    for (size_t i = 0; i < coralReef.size(); ++i) {
+        std::cout << "Koral [" << i << "]: "
+            << "Pozycja: (" << coralReef[i].position.x << ", " << coralReef[i].position.y << ", " << coralReef[i].position.z << ") | "
+            << "Liczba wezlow: " << coralReef[i].nodes.size() << " | "
+            << "Szerokosc linii: " << coralReef[i].config.line_width << " | "
+            << "Kolor RGB: (" << coralReef[i].config.color[0] << ", " << coralReef[i].config.color[1] << ", " << coralReef[i].config.color[2] << ")"
+            << std::endl;
+    }
     // Delta time
     float lastTime = (float)glfwGetTime();
 
@@ -387,20 +444,6 @@ int main() {
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS)
-            generate_coral(0);
-
-		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-			generate_coral(1);
-
-        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-            generate_coral(2);
-
-        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-            generate_coral(3);
-
-		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-			generate_coral(4);
 
         // Włączamy bufor głębokości
         glEnable(GL_DEPTH_TEST);
@@ -470,36 +513,46 @@ int main() {
 
         glEnd();
 
-        glLineWidth(currentConfig.line_width);
-        glColor3f(currentConfig.color[0], currentConfig.color[1], currentConfig.color[2]);
+        for (const auto& coral : coralReef) {
+            glPushMatrix();
 
-        glBegin(GL_LINES);
-        for (const auto& n : coralNodes) {
-            if (n.parentIndex != -1) {
-                const Node& parentNode = coralNodes[n.parentIndex];
-                // Render flat 2D on the XY viewport plane, rising above y = 0
-                glVertex3f(parentNode.x, parentNode.y, 0.0f);
-                glVertex3f(n.x, n.y, 0.0f);
-            }
-        }
-        glEnd();
+            // Przesuwamy się do punktu na dnie, gdzie koral ma rosnąć
+            glTranslatef(coral.position.x, coral.position.y, coral.position.z);
+            glRotatef(coral.rotationY, 0.0f, 1.0f, 0.0f);
+            // Ustawiamy styl linii dla tego konkretnego typu korala
+            glLineWidth(coral.config.line_width);
+            glColor3f(coral.config.color[0], coral.config.color[1], coral.config.color[2]);
 
-        // --- Render Extra Textures/Points if Specified ---
-        if (currentConfig.point_style > 0) {
-            if (currentConfig.point_style == 1) { // Spotted Texture (e.g., Brain Coral)
-                glPointSize(2.0f);
-                glColor3f(0.1f, 0.1f, 0.1f);
-            }
-            else if (currentConfig.point_style == 2) { // Segmented Node Rings (e.g., Bamboo Coral)
-                glPointSize(5.0f);
-                glColor3f(0.05f, 0.15f, 0.22f);
-            }
-
-            glBegin(GL_POINTS);
-            for (const auto& n : coralNodes) {
-                glVertex3f(n.x, n.y, 0.001f); // Micro-offset Z to prevent depth fighting over the lines
+            // Rysujemy linie (szkielet) korala
+            glBegin(GL_LINES);
+            for (const auto& n : coral.nodes) {
+                if (n.parentIndex != -1) {
+                    const Node& parentNode = coral.nodes[n.parentIndex];
+                    glVertex3f(parentNode.x, parentNode.y, 0.0f);
+                    glVertex3f(n.x, n.y, 0.0f);
+                }
             }
             glEnd();
+
+            // Rysujemy dodatkowe punkty/teksturę (jeśli koral ma point_style > 0)
+            if (coral.config.point_style > 0) {
+                if (coral.config.point_style == 1) {
+                    glPointSize(2.0f);
+                    glColor3f(0.1f, 0.1f, 0.1f);
+                }
+                else if (coral.config.point_style == 2) {
+                    glPointSize(5.0f);
+                    glColor3f(0.05f, 0.15f, 0.22f);
+                }
+
+                glBegin(GL_POINTS);
+                for (const auto& n : coral.nodes) {
+                    glVertex3f(n.x, n.y, 0.001f);
+                }
+                glEnd();
+            }
+
+            glPopMatrix(); // Przywracamy macierz, żeby kolejny koral rysował się od czystej pozycji
         }
 
         generate_floor();
