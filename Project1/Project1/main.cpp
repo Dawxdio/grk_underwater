@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
+#include <chrono>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -18,6 +19,7 @@ struct Node {
     int parentIndex;
     float dirX, dirY;
     int count;
+    bool alive = true;
 };
 
 struct Attractor {
@@ -80,10 +82,10 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
         break;
 
     case 2: // Brain Coral (Convoluted, dense low-lying profile)
-        currentConfig = { 600, 0.03f, 0.25f, 0.02f, 0.1f, {0.82f, 0.70f, 0.55f}, 3.5f, 1 };
+        currentConfig = { 800, 0.03f, 0.25f, 0.02f, 0.1f, {0.82f, 0.70f, 0.55f}, 3.5f, 1 }; // Zwiększyłem num_attractors do 800 dla gęstości
         for (int i = 0; i < currentConfig.num_attractors; ++i) {
-            float x = ((rand() / (float)RAND_MAX) * 2.0f - 1.0f) * 1.5f;
-            float y = 0.1f + (rand() / (float)RAND_MAX) * 1.2f;
+            float x = ((rand() / (float)RAND_MAX) * 2.0f - 1.0f) * 2.5f; // większy zasięg x
+            float y = 0.1f + (rand() / (float)RAND_MAX) * 2.0f;          // większy zasięg y
             attractors.push_back({ x, y, true });
         }
         break;
@@ -173,7 +175,29 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 
         // Process growth expansions
         for (size_t i = 0; i < current_size; ++i) {
-            if (coralNodes[i].count > 0) {
+            if (coralNodes[i].count > 0 && coralNodes[i].alive) {
+
+                // 1. Obliczamy odległość od środka
+                float distFromStart = std::sqrt(coralNodes[i].x * coralNodes[i].x + coralNodes[i].y * coralNodes[i].y);
+
+                // 2. Zwiększamy maksymalny promień (koral będzie mógł być większy)
+                float max_radius = 2.2f;
+
+                // Podstawa prawdopodobieństwa (od 0.0 do 1.0)
+                float ratio = distFromStart / max_radius;
+                if (ratio > 1.0f) ratio = 1.0f;
+
+                // --- ZMIANA: Podnosimy ratio do potęgi (np. 4 lub 5) ---
+                // Dzięki temu dla ratio = 0.5 (połowa drogi), szansa na śmierć to 0.5^4 = 0.06 (czyli tylko 6% zamiast 50%!)
+                float death_probability = std::pow(ratio, 4);
+
+                // Losowanie
+                float random_roll = (rand() / (float)RAND_MAX);
+
+                if (random_roll < death_probability) {
+                    coralNodes[i].alive = false;
+                    continue;
+                }
                 float avgX = coralNodes[i].dirX / coralNodes[i].count;
                 float avgY = coralNodes[i].dirY / coralNodes[i].count;
 
@@ -190,6 +214,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
                 n.y = coralNodes[i].y + avgY * currentConfig.branch_length;
                 n.parentIndex = static_cast<int>(i);
                 n.dirX = 0; n.dirY = 0; n.count = 0;
+                n.alive = true; // Nowy węzeł domyślnie zaczyna jako żywy
 
                 newNodes.push_back(n);
             }
@@ -224,8 +249,8 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 float yaw = -90.0f;
 
-float movementSpeed = 0.05f;
-float rotationSpeed = 1.0f;
+float movementSpeed = 0.02f;
+float rotationSpeed = 0.50f;
 // Look direction vector
 void updateCameraVectors() {
     glm::vec3 front;
@@ -388,6 +413,8 @@ void generate_coral_reef(glm::vec2 min_bound, glm::vec2 max_bound, float density
 }
 
 int main() {
+    auto programStart = std::chrono::high_resolution_clock::now();
+
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // Initialize the library
@@ -417,7 +444,7 @@ int main() {
     generate_coral_reef(min_obszar1, max_obszar1, gestosc1, typ_korala1);
     glm::vec2 min_obszar2(-15.0f, -15.0f);
     glm::vec2 max_obszar2(-5.0f, -5.0f);
-    float gestosc2 = 0.3f;
+    float gestosc2 = 0.15f;
     int typ_korala2 = 2;
 
     generate_coral_reef(min_obszar2, max_obszar2, gestosc2, typ_korala2);
@@ -433,6 +460,12 @@ int main() {
     }
     // Delta time
     float lastTime = (float)glfwGetTime();
+
+    auto now = std::chrono::high_resolution_clock::now();
+    float elapsedTime =
+        std::chrono::duration<float>(now - programStart).count();
+
+    std::cout << "\rCzas programu: " << elapsedTime << " s" << std::flush;
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {

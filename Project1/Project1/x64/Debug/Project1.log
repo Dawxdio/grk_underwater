@@ -1,3 +1,4 @@
 ﻿  main.cpp
-C:\Users\Kostek\source\repos\grk_underwater\Project1\Project1\main.cpp(469,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
-  Project1.vcxproj -> C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\Project1.exe
+C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\Project1\main.cpp(192,41): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\Project1\main.cpp(502,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+  Project1.vcxproj -> C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\x64\Debug\Project1.exe
