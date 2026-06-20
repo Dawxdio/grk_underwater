@@ -3,3 +3,10 @@ glfw-3.4.bin.WIN64/
 x64/
 Project1.vcxproj
 CopilotSnapshots/
+
+*.obj
+*.ilk
+*.pdb
+*.idb
+*.log
+*.tlog
