@@ -113,12 +113,12 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalUsingDirectories>C:\Users\Kostek\source\repos\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalBMIDirectories>C:\Users\Kostek\source\repos\Project1\glfw-3.4.bin.WIN64\include;%(AdditionalBMIDirectories)</AdditionalBMIDirectories>
-      <AdditionalIncludeDirectories>C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\glfw-3.4.bin.WIN64\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\glfw-3.4.bin.WIN64\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;
 opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -151,14 +151,18 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="coral_generation.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="movement.cpp" />
+    <ClCompile Include="ocean_floor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="coral_generation.h" />
     <ClInclude Include="movement.h" />
+    <ClInclude Include="ocean_floor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

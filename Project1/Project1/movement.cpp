@@ -9,7 +9,7 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 float yaw = -90.0f;
 
-float movementSpeed = 0.02f;
+float movementSpeed = 0.40f;
 float rotationSpeed = 0.50f;
 
 static void updateCameraVectors() {
