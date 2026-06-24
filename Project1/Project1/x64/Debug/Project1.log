@@ -1,10 +1,4 @@
 ﻿  coral_generation.cpp
-C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\Project1\coral_generation.cpp(176,29): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
-  main.cpp
-C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\Project1\main.cpp(131,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
-  movement.cpp
-  ocean_floor.cpp
-  Generowanie kodu...
-  LINK : nie znaleziono elementu C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\x64\Debug\Project1.exe ani nie został on skompilowany podczas ostatniego konsolidowania przyrostowego; zostanie wykonana pełna konsolidacja
-LINK : warning LNK4098: domyślna biblioteka „MSVCRT” powoduje konflikt z innymi bibliotekami; użyj opcji /NODEFAULTLIB:biblioteka
-  Project1.vcxproj -> C:\Users\Adam\Desktop\szkola\semestr4\grafika\projekt\grk_underwater\Project1\x64\Debug\Project1.exe
+D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\Project1\coral_generation.cpp(515,30): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+LINK : warning LNK4098: domyślna biblioteka "MSVCRT" powoduje konflikt z innymi bibliotekami; użyj opcji /NODEFAULTLIB:biblioteka
+  Project1.vcxproj -> D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\x64\Debug\Project1.exe

@@ -27,6 +27,15 @@ int main() {
         return -1;
     }
 
+    // Zapis korali do plików JSON (tylko raz, zakomentowane, bo nie chcemy nadpisywać przy każdym uruchomieniu)
+    /*
+    writeCoralsOfType(0, 100);
+    writeCoralsOfType(1, 100);
+    writeCoralsOfType(2, 100);
+    writeCoralsOfType(3, 100);
+    writeCoralsOfType(4, 100);
+    writeCoralsOfType(-1, 100);*/
+
     // Create a windowed mode window and its OpenGL context
     GLFWwindow* window = glfwCreateWindow(640, 480, "Hello OpenGL", NULL, NULL);
     if (!window) {
@@ -37,6 +46,27 @@ int main() {
 
     // Make the window's context current
     glfwMakeContextCurrent(window);
+
+    // testowanie wyglądu korali w scenie(te na powierzchni)
+
+    {
+        float surfaceY = 0.01f; // tu jest powierzchnia wody w scenie
+        float startX = -6.0f;
+        float spacing = 2.0f;
+        std::vector<int> testTypes = { 0, 1, 2, 3, 4, -1 };
+        for (size_t i = 0; i < testTypes.size(); ++i) {
+            glm::vec3 pos(startX + (float)i * spacing, surfaceY, 0.0f);
+            CoralInstance c;
+            bool loaded = loadRandomCoralFromFile(testTypes[i], c);
+            if (!loaded) {
+                std::cerr << "Brak pliku lub blad parsowania dla typu korala: " << testTypes[i] << ". Pomijam." << std::endl;
+                continue; // nie generujemy proceduralnie, idziemy dalej
+            }
+            c.position = pos;
+            c.rotationY = (std::rand() / (float)RAND_MAX) * 360.0f;
+            coralReef.push_back(c);
+        }
+    }
 
 	generate_single_coral(0, glm::vec3(0.0f, 0.0f, 0.0f));
 
@@ -190,16 +220,17 @@ int main() {
             for (const auto& n : coral.nodes) {
                 if (n.parentIndex != -1) {
                     const Node& parentNode = coral.nodes[n.parentIndex];
-                    glm::vec3 pa(parentNode.x, parentNode.y, 0.0f);
-                    glm::vec3 pb(n.x, n.y, 0.0f);
+                    // Używamy pełnych współrzędnych 3D (x,y,z) dla węzłów
+                    glm::vec3 pa(parentNode.x, parentNode.y, parentNode.z);
+                    glm::vec3 pb(n.x, n.y, n.z);
                     if (coral.config.branch_radius > 0.0001f) {
                         // Rysuj przybliżony walec między punktami
                         draw_cylinder_between(pa, pb, coral.config.branch_radius, 10);
                     }
                     else {
                         glBegin(GL_LINES);
-                        glVertex3f(parentNode.x, parentNode.y, 0.0f);
-                        glVertex3f(n.x, n.y, 0.0f);
+                        glVertex3f(parentNode.x, parentNode.y, parentNode.z);
+                        glVertex3f(n.x, n.y, n.z);
                         glEnd();
                     }
                 }
@@ -218,7 +249,7 @@ int main() {
 
                 glBegin(GL_POINTS);
                 for (const auto& n : coral.nodes) {
-                    glVertex3f(n.x, n.y, 0.001f);
+                    glVertex3f(n.x, n.y, n.z);
                 }
                 glEnd();
             }
