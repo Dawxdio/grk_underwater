@@ -32,13 +32,13 @@ int main() {
     }
 
     // Zapis korali do plików JSON (tylko raz, zakomentowane, bo nie chcemy nadpisywać przy każdym uruchomieniu)
-    /*
-    writeCoralsOfType(0, 100);
-    writeCoralsOfType(1, 100);
-    writeCoralsOfType(2, 100);
-    writeCoralsOfType(3, 100);
-    writeCoralsOfType(4, 100);
-    writeCoralsOfType(-1, 100);*/
+    
+    //writeCoralsOfType(0, 100);
+    //writeCoralsOfType(1, 100);
+    //writeCoralsOfType(2, 100);
+    //writeCoralsOfType(3, 100);
+   // writeCoralsOfType(4, 100);
+    //writeCoralsOfType(-1, 100);
 
     // Create a windowed mode window and its OpenGL context
     GLFWwindow* window = glfwCreateWindow(640, 480, "Hello OpenGL", NULL, NULL);
@@ -216,7 +216,7 @@ int main() {
         viewMatrix = getViewMatrix();
         // Pozycja kamery to translacja zapisana w odwrotności macierzy widoku:
         glm::vec3 cameraPos = glm::vec3(glm::inverse(viewMatrix)[3]);
-
+        glUniform1f(glGetUniformLocation(pbrShader, "time"), currentTime);
         // Przekazanie do shadera:
         glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &cameraPos[0]);
         // Ustawienie światła dla PBR (przykładowe pozycje)

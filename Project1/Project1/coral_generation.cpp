@@ -150,6 +150,7 @@ void writeCoralsOfType(int coralType, int count) {
 		f << "      }";
 		if (i + 1 < count) f << ",\n";
 		else f << "\n";
+		std::cout << "Zapisano koral [" << i << "]" << std::endl;
 	}
 
 	f << "    ]\n  }\n}\n";
@@ -377,7 +378,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 		// Define structural presets mimicking the reference profiles
 		switch (coral_type) {
 		case 0: // Staghorn Coral / Classic Branching
-			currentConfig = { 500, 0.08f, 0.6f, 0.05f, 0.3f, {1.0f, 0.42f, 0.55f}, 0.02f, 2.0f, 0 };
+			//currentConfig = { 500, 0.08f, 0.6f, 0.05f, 0.3f, {1.0f, 0.42f, 0.55f}, 0.02f, 2.0f, 0 };
 			for (int i = 0; i < currentConfig.num_attractors; ++i) {
 				float theta = (rand() / (float)RAND_MAX) * (float)M_PI;
 				float r = 0.5f + (rand() / (float)RAND_MAX) * 3.0f;
@@ -387,7 +388,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 			break;
 
 		case 1: // Sea Fan (Broad, flat, lacy growth layout)
-			currentConfig = { 700, 0.04f, 0.4f, 0.03f, 0.4f, {0.17f, 0.79f, 0.84f}, 0.015f, 1.2f, 0 };
+			//currentConfig = { 700, 0.04f, 0.4f, 0.03f, 0.4f, {0.17f, 0.79f, 0.84f}, 0.015f, 1.2f, 0 };
 			for (int i = 0; i < currentConfig.num_attractors; ++i) {
 				float x = ((rand() / (float)RAND_MAX) * 2.0f - 1.0f) * 2.5f;
 				float y = 0.2f + (rand() / (float)RAND_MAX) * 3.5f;
@@ -397,7 +398,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 			break;
 
 		case 2: // Brain Coral (Convoluted, dense low-lying profile)
-			currentConfig = { 800, 0.03f, 0.25f, 0.02f, 0.1f, {0.82f, 0.70f, 0.55f}, 0.035f, 3.5f, 1 };
+			//currentConfig = { 800, 0.03f, 0.25f, 0.02f, 0.1f, {0.82f, 0.70f, 0.55f}, 0.035f, 3.5f, 1 };
 			for (int i = 0; i < currentConfig.num_attractors; ++i) {
 				float x = ((rand() / (float)RAND_MAX) * 2.0f - 1.0f) * 2.5f;
 				float y = 0.1f + (rand() / (float)RAND_MAX) * 2.0f;
@@ -407,7 +408,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 			break;
 
 		case 3: // Brush Coral / Shelf Plates
-			currentConfig = { 600, 0.10f, 0.7f, 0.06f, 0.6f, {1.0f, 0.8f, 0.5f}, 0.025f, 4.0f, 0 };
+			//currentConfig = { 600, 0.10f, 0.7f, 0.06f, 0.6f, {1.0f, 0.8f, 0.5f}, 0.025f, 4.0f, 0 };
 			for (int i = 0; i < currentConfig.num_attractors; ++i) {
 				int layer = rand() % 3;
 				float y_min = 0.4f + layer * 1.1f;
@@ -420,7 +421,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 			break;
 
 		case 4: // Bamboo Coral (Segmented straight vertical nodes)
-			currentConfig = { 250, 0.20f, 0.9f, 0.14f, 0.8f, {0.84f, 0.88f, 0.90f}, 0.035f, 1.5f, 2 };
+			//currentConfig = { 250, 0.20f, 0.9f, 0.14f, 0.8f, {0.84f, 0.88f, 0.90f}, 0.035f, 1.5f, 2 };
 			for (int i = 0; i < currentConfig.num_attractors; ++i) {
 				int spire = rand() % 3;
 				float x_base = -1.5f + spire * 1.5f;
@@ -432,7 +433,7 @@ CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos) {
 			break;
 
 		default: // Fallback to basic setup
-			currentConfig = { 400, 0.1f, 0.5f, 0.05f, 0.2f, {1.0f, 1.0f, 1.0f}, 0.02f, 1.5f, 0 };
+			//currentConfig = { 400, 0.1f, 0.5f, 0.05f, 0.2f, {1.0f, 1.0f, 1.0f}, 0.02f, 1.5f, 0 };
 			// Default: generate a modest cloud of attractors in 3D so fallback corals grow
 			for (int i = 0; i < currentConfig.num_attractors; ++i) {
 				float ang = (rand() / (float)RAND_MAX) * 2.0f * (float)M_PI;
