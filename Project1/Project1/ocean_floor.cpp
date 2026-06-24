@@ -1,10 +1,27 @@
 #include "ocean_floor.h"
 #include <GLFW/glfw3.h>
-
+#include <glm/glm.hpp>
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
+glm::vec3 compute_floor_normal(float x, float z) {
+	float delta = 0.1f; // Mały krok do sprawdzenia sąsiadów
+
+	// Pobieramy wysokości sąsiadujących punktów
+	float hL = oceanFloorHeight(x - delta, z);
+	float hR = oceanFloorHeight(x + delta, z);
+	float hD = oceanFloorHeight(x, z - delta);
+	float hU = oceanFloorHeight(x, z + delta);
+
+	// Składowe wektora normalnego na podstawie pochodnych przestrzennych
+	glm::vec3 normal;
+	normal.x = hL - hR;
+	normal.y = 2.0f * delta;
+	normal.z = hD - hU;
+
+	return glm::normalize(normal);
+}
 float oceanFloorHeight(float x, float z)
 {
 	float r =
@@ -63,6 +80,7 @@ float oceanFloorHeight(float x, float z)
 
 void generate_ocean_floor()
 {
+	// Kolor piasku przesyłamy tradycyjnie (zakładając, że shader wspiera glColor lub ustawiasz uniform albedo)
 	glColor3f(0.55f, 0.40f, 0.20f);
 
 	const int size = 50;
@@ -73,17 +91,18 @@ void generate_ocean_floor()
 
 		for (int x = -size; x <= size; x++)
 		{
-			glVertex3f(
-				(float)x,
-				oceanFloorHeight((float)x, (float)z),
-				(float)z
-			);
+			float fx = (float)x;
+			float fz = (float)z;
 
-			glVertex3f(
-				(float)x,
-				oceanFloorHeight((float)x, (float)(z + 1)),
-				(float)(z + 1)
-			);
+			// Wierzchołek 1 (z)
+			glm::vec3 norm1 = compute_floor_normal(fx, fz);
+			glNormal3f(norm1.x, norm1.y, norm1.z); // Przekazanie normalnej do lokalizacji 1 shadera
+			glVertex3f(fx, oceanFloorHeight(fx, fz), fz);
+
+			// Wierzchołek 2 (z + 1)
+			glm::vec3 norm2 = compute_floor_normal(fx, fz + 1.0f);
+			glNormal3f(norm2.x, norm2.y, norm2.z); // Przekazanie normalnej do lokalizacji 1 shadera
+			glVertex3f(fx, oceanFloorHeight(fx, fz + 1.0f), fz + 1.0f);
 		}
 
 		glEnd();

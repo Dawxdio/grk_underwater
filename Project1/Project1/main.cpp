@@ -1,3 +1,4 @@
+#include "GL/glew.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cmath>
@@ -11,10 +12,13 @@
 #include "movement.h"
 #include "coral_generation.h"
 #include "ocean_floor.h"
+#include "ShaderLoader.h"
+#include <cstddef>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
 
 int main() {
     auto programStart = std::chrono::high_resolution_clock::now();
@@ -45,30 +49,18 @@ int main() {
     }
 
     // Make the window's context current
+	
     glfwMakeContextCurrent(window);
-
-    // testowanie wyglądu korali w scenie(te na powierzchni)
-
-    {
-        float surfaceY = 0.01f; // tu jest powierzchnia wody w scenie
-        float startX = -6.0f;
-        float spacing = 2.0f;
-        std::vector<int> testTypes = { 0, 1, 2, 3, 4, -1 };
-        for (size_t i = 0; i < testTypes.size(); ++i) {
-            glm::vec3 pos(startX + (float)i * spacing, surfaceY, 0.0f);
-            CoralInstance c;
-            bool loaded = loadRandomCoralFromFile(testTypes[i], c);
-            if (!loaded) {
-                std::cerr << "Brak pliku lub blad parsowania dla typu korala: " << testTypes[i] << ". Pomijam." << std::endl;
-                continue; // nie generujemy proceduralnie, idziemy dalej
-            }
-            c.position = pos;
-            c.rotationY = (std::rand() / (float)RAND_MAX) * 360.0f;
-            coralReef.push_back(c);
-        }
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW!" << std::endl;
+        return -1;
     }
-
-	generate_single_coral(0, glm::vec3(0.0f, 0.0f, 0.0f));
+    GLuint pbrShader = LoadShaders("pbr.vert", "pbr.frag");
+    if (pbrShader == 0) {
+        std::cerr << "Blad ladowania shadera!" << std::endl;
+        return -1;
+    }
+    // testowanie wyglądu korali w scenie(te na powierzchni)
 
     glm::vec2 min_obszar1(-5.0f, -5.0f);
     glm::vec2 max_obszar1(5.0f, 5.0f);
@@ -106,6 +98,9 @@ int main() {
 
     generate_coral_reef(min_obszar5, max_obszar5, gestosc5, typ_korala5);
 
+    for (auto& coral : coralReef) {
+        buildGpuSegmentsForCoral(coral); // To prześle geometrię korali na GPU przed uruchomieniem pętli renderu!
+    }
 
     std::cout << "Liczba korali w coralReef: " << coralReef.size() << std::endl;
 
@@ -205,59 +200,76 @@ int main() {
 
         glEnd();
 
+        // 1. Aktywujemy Twój shader PBR
+        glUseProgram(pbrShader);
+
+        // 2. Wyciągamy stare macierze z OpenGL 1.1, żeby pasowały do reszty programu grupy
+        float modelview[16];
+        float projection[16];
+        glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+        glGetFloatv(GL_PROJECTION_MATRIX, projection);
+
+        // Przekazujemy macierze do Twojego vertex shadera
+        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "view"), 1, GL_FALSE, modelview);
+        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "projection"), 1, GL_FALSE, projection);
+
+        viewMatrix = getViewMatrix();
+        // Pozycja kamery to translacja zapisana w odwrotności macierzy widoku:
+        glm::vec3 cameraPos = glm::vec3(glm::inverse(viewMatrix)[3]);
+
+        // Przekazanie do shadera:
+        glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &cameraPos[0]);
+        // Ustawienie światła dla PBR (przykładowe pozycje)
+        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), 0.0f, 10.0f, 0.0f);
+        glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 150.0f, 150.0f, 150.0f); // Mocne światło PBR
+        glUniform3f(glGetUniformLocation(pbrShader, "fogColor"), 0.0f, 0.3f, 0.6f); // Taki sam jak kolor wody/tła
+        glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
+
+        // 3. Rysujemy każdy koral nowoczesną metodą z VBO
         for (const auto& coral : coralReef) {
-            glPushMatrix();
+            if (coral.segmentVBO == 0) continue;
 
-            // Przesuwamy się do punktu na dnie, gdzie koral ma rosnąć
-            glTranslatef(coral.position.x, coral.position.y, coral.position.z);
-            glRotatef(coral.rotationY, 0.0f, 1.0f, 0.0f);
-            // Ustawiamy styl linii dla tego konkretnego typu korala
-            glLineWidth(coral.config.line_width);
-            glColor3f(coral.config.color[0], coral.config.color[1], coral.config.color[2]);
+            // 1. Obliczanie i przekazywanie macierzy modelu (pozycja, rotacja)
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, coral.position);
+            model = glm::rotate(model, glm::radians(coral.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+            glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &model[0][0]);
 
-            // Rysujemy gałęzie: jeśli config.branch_radius>0 rysujemy przybliżony walec,
-            // w przeciwnym razie rysujemy prostą linię
-            for (const auto& n : coral.nodes) {
-                if (n.parentIndex != -1) {
-                    const Node& parentNode = coral.nodes[n.parentIndex];
-                    // Używamy pełnych współrzędnych 3D (x,y,z) dla węzłów
-                    glm::vec3 pa(parentNode.x, parentNode.y, parentNode.z);
-                    glm::vec3 pb(n.x, n.y, n.z);
-                    if (coral.config.branch_radius > 0.0001f) {
-                        // Rysuj przybliżony walec między punktami
-                        draw_cylinder_between(pa, pb, coral.config.branch_radius, 10);
-                    }
-                    else {
-                        glBegin(GL_LINES);
-                        glVertex3f(parentNode.x, parentNode.y, parentNode.z);
-                        glVertex3f(n.x, n.y, n.z);
-                        glEnd();
-                    }
-                }
-            }
+            // 2. KLUCZOWE: Pobranie lokalizacji "albedo" z Twojego shadera i wysłanie koloru korala
+            GLint albedoLoc = glGetUniformLocation(pbrShader, "albedo");
+            glUniform3fv(albedoLoc, 1, coral.config.color);
 
-            // Rysujemy dodatkowe punkty/teksturę (jeśli koral ma point_style > 0)
-            if (coral.config.point_style > 0) {
-                if (coral.config.point_style == 1) {
-                    glPointSize(2.0f);
-                    glColor3f(0.1f, 0.1f, 0.1f);
-                }
-                else if (coral.config.point_style == 2) {
-                    glPointSize(5.0f);
-                    glColor3f(0.05f, 0.15f, 0.22f);
-                }
+            // 3. Parametry PBR (chropowatość i metaliczność)
+            glUniform1f(glGetUniformLocation(pbrShader, "metallic"), 0.05f);
+            glUniform1f(glGetUniformLocation(pbrShader, "roughness"), 0.85f);
 
-                glBegin(GL_POINTS);
-                for (const auto& n : coral.nodes) {
-                    glVertex3f(n.x, n.y, n.z);
-                }
-                glEnd();
-            }
+            // 4. Bindowanie bufora VBO i rysowanie
+            glBindBuffer(GL_ARRAY_BUFFER, coral.segmentVBO);
 
-            glPopMatrix(); // Przywracamy macierz, żeby kolejny koral rysował się od czystej pozycji
+            glEnableVertexAttribArray(0); // Pozycja
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, position));
+
+            glEnableVertexAttribArray(1); // Normalne
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, normal));
+
+            // Rysowanie geometrii
+            glDrawArrays(GL_TRIANGLES, 0, coral.segmentVertexCount);
+
+            glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
         }
 
+        glUniform3f(glGetUniformLocation(pbrShader, "albedo"), 0.55f, 0.40f, 0.20f);
+
+        // Ustawiamy macierz modelu dla dna na tożsamościową (dno jest nieruchome w centrum świata)
+        glm::mat4 floorModel = glm::mat4(1.0f);
+        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &floorModel[0][0]);
+
+        // Rysujemy dno z aktywnym shaderem oświetlenia
         generate_ocean_floor();
+
+        // Dopiero po narysowaniu dna wyłączamy shader dla wody/znacznika starego typu
+        glUseProgram(0);
 
         // Swap front and back buffers
         glfwSwapBuffers(window);

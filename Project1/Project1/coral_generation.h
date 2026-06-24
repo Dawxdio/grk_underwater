@@ -30,6 +30,12 @@ struct CoralConfig {
 	int point_style; // 0: None, 1: Spotted, 2: Segmented Nodes
 };
 
+struct PbrVertex {
+	glm::vec3 position;
+	glm::vec3 normal;
+	glm::vec2 texCoords;
+};
+
 struct CoralInstance {
 	std::vector<Node> nodes;
 	CoralConfig config;
@@ -45,6 +51,7 @@ extern std::vector<CoralInstance> coralReef;
 // Generatory
 CoralInstance generate_single_coral(int coral_type, glm::vec3 start_pos);
 void generate_coral_reef(glm::vec2 min_bound, glm::vec2 max_bound, float density, int coral_type);
+void buildGpuSegmentsForCoral(CoralInstance& coral);
 
 // Wczytuje losowy koral z pliku corals_<type>.json wygenerowanego przez program.
 // Zwraca true gdy wczytanie powiodlo sie i wypelnia out.nodes oraz out.config (bez pozycji).

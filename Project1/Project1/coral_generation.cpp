@@ -1,5 +1,5 @@
 #include "coral_generation.h"
-
+#include "GL/glew.h"
 #include <cmath>
 #include <vector>
 #include <cstdlib>
@@ -12,35 +12,102 @@
 #include <GLFW/glfw3.h>
 #include "ocean_floor.h"
 
+
 // Helper: build CPU-side segment info for coral (no GPU helpers)
-static void buildGpuSegmentsForCoral(CoralInstance& coral) {
-	// Build contiguous float vertex list: parent, child, parent, child, ...
-	std::vector<float> verts;
-	verts.reserve(coral.nodes.size() * 2 * 3);
+void buildGpuSegmentsForCoral(CoralInstance& coral) {
+	std::vector<PbrVertex> totalVertices;
+	int segments = 8;
+	float radius = coral.config.branch_radius;
+
 	for (size_t i = 0; i < coral.nodes.size(); ++i) {
 		const Node& n = coral.nodes[i];
-		if (n.parentIndex != -1) {
-			const Node& p = coral.nodes[n.parentIndex];
-			verts.push_back(p.x);
-			verts.push_back(p.y);
-			verts.push_back(p.z);
-			verts.push_back(n.x);
-			verts.push_back(n.y);
-			verts.push_back(n.z);
+		if (n.parentIndex == -1) continue;
+
+		const Node& p = coral.nodes[n.parentIndex];
+		glm::vec3 a(p.x, p.y, p.z);
+		glm::vec3 b(n.x, n.y, n.z);
+
+		glm::vec3 dir = b - a;
+		float len = glm::length(dir);
+		if (len < 1e-6f) continue;
+		glm::vec3 z = glm::normalize(dir);
+
+		glm::vec3 tmp = (fabs(z.x) < 0.0001f && fabs(z.y) < 0.0001f) ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(0.0f, 0.0f, 1.0f);
+		glm::vec3 x = glm::normalize(glm::cross(tmp, z));
+		glm::vec3 y = glm::normalize(glm::cross(z, x));
+
+		for (int j = 0; j < segments; ++j) {
+			float theta1 = (float)j / (float)segments * 2.0f * 3.14159265f;
+			float theta2 = (float)(j + 1) / (float)segments * 2.0f * 3.14159265f;
+
+			glm::vec3 norm1 = glm::normalize(x * cosf(theta1) + y * sinf(theta1));
+			glm::vec3 norm2 = glm::normalize(x * cosf(theta2) + y * sinf(theta2));
+
+			glm::vec3 va1 = a + norm1 * radius;
+			glm::vec3 va2 = a + norm2 * radius;
+			glm::vec3 vb1 = b + norm1 * radius;
+			glm::vec3 vb2 = b + norm2 * radius;
+
+			// Trójkąt 1 (va1 -> vb1 -> va2)
+			totalVertices.push_back({ va1, norm1, glm::vec2(0.0f) });
+			totalVertices.push_back({ vb1, norm1, glm::vec2(0.0f) });
+			totalVertices.push_back({ va2, norm2, glm::vec2(0.0f) });
+
+			// Trójkąt 2 (va2 -> vb1 -> vb2)
+			totalVertices.push_back({ va2, norm2, glm::vec2(0.0f) });
+			totalVertices.push_back({ vb1, norm1, glm::vec2(0.0f) });
+			totalVertices.push_back({ vb2, norm2, glm::vec2(0.0f) });
 		}
 	}
 
-	if (verts.empty()) {
+	if (totalVertices.empty()) {
 		coral.segmentVBO = 0;
 		coral.segmentVertexCount = 0;
 		return;
 	}
 
-	// Nie tworzymy VBO w tej wersji; renderer używa CPU-side nodes.
-	coral.segmentVBO = 0;
-	coral.segmentVertexCount = (int)(verts.size() / 3);
+	// Usunięcie starych buforów zapobiega wyciekom pamięci
+	if (coral.segmentVBO != 0) {
+		glDeleteBuffers(1, &coral.segmentVBO);
+	}
+
+	glGenBuffers(1, &coral.segmentVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, coral.segmentVBO);
+	glBufferData(GL_ARRAY_BUFFER, totalVertices.size() * sizeof(PbrVertex), totalVertices.data(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	coral.segmentVertexCount = (int)totalVertices.size();
 }
 
+void renderCoralPBR(const CoralInstance& coral, GLuint pbrShaderProgram) {
+	if (coral.segmentVBO == 0 || coral.segmentVertexCount == 0) return;
+
+	glUseProgram(pbrShaderProgram);
+
+	// Przekaż do Shadera parametry Metallic i Roughness (np. z konfiguracji lub stałe)
+	glUniform3fv(glGetUniformLocation(pbrShaderProgram, "albedo"), 1, coral.config.color);
+	glUniform1f(glGetUniformLocation(pbrShaderProgram, "metallic"), 0.1f);   // Korale raczej nie są metaliczne
+	glUniform1f(glGetUniformLocation(pbrShaderProgram, "roughness"), 0.8f);  // Za to są mocno chropowate
+
+	// Bindowanie bufora
+	glBindBuffer(GL_ARRAY_BUFFER, coral.segmentVBO);
+
+	// Linkowanie pozycji (Location 0 w vertex shaderze)
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, position));
+
+	// Linkowanie normalnych (Location 1 w vertex shaderze - KLUCZOWE DLA PBR!)
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, normal));
+
+	// Renderowanie
+	glDrawArrays(GL_TRIANGLES, 0, coral.segmentVertexCount);
+
+	// Czyszczenie stanu
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
 // Zapisuje wygenerowane korale do pliku corals_<type>.json (count elementów)
 void writeCoralsOfType(int coralType, int count) {
 	if (count < 1) count = 1;
@@ -101,23 +168,23 @@ static CoralConfig currentConfig;
 // Configure currentConfig for a given coral type (shared helper)
 static void configure_config(int coral_type) {
 	switch (coral_type) {
-	case 0:
-		currentConfig = { 500, 0.08f, 0.6f, 0.05f, 0.3f, {1.0f, 0.42f, 0.55f}, 0.02f, 2.0f, 0 };
+	case 0: // Staghorn - zamiast jaskrawego różu: głęboka, ciemna purpura/biskupia czerwień
+		currentConfig = { 500, 0.08f, 0.6f, 0.05f, 0.3f, {0.45f, 0.12f, 0.28f}, 0.02f, 2.0f, 0 };
 		break;
-	case 1:
-		currentConfig = { 700, 0.04f, 0.4f, 0.03f, 0.4f, {0.17f, 0.79f, 0.84f}, 0.015f, 1.2f, 0 };
+	case 1: // Sea Fan - zamiast jasnego turkusowego: głęboki, ciemny cyjan / morski granat
+		currentConfig = { 700, 0.04f, 0.4f, 0.03f, 0.4f, {0.05f, 0.32f, 0.40f}, 0.015f, 1.2f, 0 };
 		break;
-	case 2:
-		currentConfig = { 800, 0.03f, 0.25f, 0.02f, 0.1f, {0.82f, 0.70f, 0.55f}, 0.035f, 3.5f, 1 };
+	case 2: // Brain - zamiast piaskowego: ciemny, oliwkowy brąz / zgniła zieleń (bardzo naturalna dla koralowców)
+		currentConfig = { 800, 0.03f, 0.25f, 0.02f, 0.1f, {0.28f, 0.35f, 0.18f}, 0.035f, 3.5f, 1 };
 		break;
-	case 3:
-		currentConfig = { 600, 0.10f, 0.7f, 0.06f, 0.6f, {1.0f, 0.8f, 0.5f}, 0.025f, 4.0f, 0 };
+	case 3: // Typ 3 - zamiast jasnego żółtego: ciepły, ciemny bursztyn / głęboka musztarda
+		currentConfig = { 600, 0.10f, 0.7f, 0.06f, 0.6f, {0.52f, 0.34f, 0.15f}, 0.025f, 4.0f, 0 };
 		break;
-	case 4:
-		currentConfig = { 250, 0.20f, 0.9f, 0.14f, 0.8f, {0.84f, 0.88f, 0.90f}, 0.035f, 1.5f, 2 };
+	case 4: // Typ 4 - zamiast tej bieli (0.84, 0.88, 0.90): ciemny, stonowany fiolet indygo / szary fiolet
+		currentConfig = { 250, 0.20f, 0.9f, 0.14f, 0.8f, {0.25f, 0.20f, 0.38f}, 0.035f, 1.5f, 2 };
 		break;
 	default:
-		currentConfig = { 400, 0.1f, 0.5f, 0.05f, 0.2f, {1.0f, 1.0f, 1.0f}, 0.02f, 1.5f, 0 };
+		currentConfig = { 400, 0.1f, 0.5f, 0.05f, 0.2f, {0.3f, 0.3f, 0.3f}, 0.02f, 1.5f, 0 };
 		break;
 	}
 }
