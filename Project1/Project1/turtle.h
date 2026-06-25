@@ -13,7 +13,7 @@ public:
     void update(float progress, SplinePath& path);
 
     // Rysuje żółwia z użyciem wyliczonej macierzy PTF
-    void draw(unsigned int shaderProgramID);
+void draw(unsigned int shaderProgramID, unsigned int textureID);
 
 private:
     unsigned int VAO, VBO;

@@ -92,7 +92,7 @@ void Turtle::update(float progress, SplinePath& path) {
 }
 
 // --- DRAW ---
-void Turtle::draw(unsigned int shaderProgramID) {
+void Turtle::draw(unsigned int shaderProgramID, unsigned int textureID) {
     glm::mat4 rotation = glm::mat4(1.0f);
     rotation[0] = glm::vec4(ptfRight, 0.0f);
     rotation[1] = glm::vec4(ptfUp, 0.0f);
@@ -101,16 +101,22 @@ void Turtle::draw(unsigned int shaderProgramID) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, position);
     model = model * rotation;
-    model = glm::scale(model, glm::vec3(0.01f));
+    model = glm::scale(model, glm::vec3(0.01f)); // Twoja dopasowana skala
 
     int modelLoc = glGetUniformLocation(shaderProgramID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    glUniform3f(glGetUniformLocation(shaderProgramID, "albedo"), 0.1f, 0.5f, 0.1f);
-    glUniform1f(glGetUniformLocation(shaderProgramID, "metallic"), 0.0f);
-    glUniform1f(glGetUniformLocation(shaderProgramID, "roughness"), 0.9f);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // Łączymy jednostkę GL_TEXTURE0 ze zmienną albedoMap w shaderze
+    glUniform1i(glGetUniformLocation(shaderProgramID, "albedoMap"), 0);
+    // Włączamy używanie mapy albedo w shaderze
+    glUniform1i(glGetUniformLocation(shaderProgramID, "useAlbedoMap"), 1);
 
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     glBindVertexArray(0);
+
+    glUniform1i(glGetUniformLocation(shaderProgramID, "useAlbedoMap"), 0);
 }
