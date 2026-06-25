@@ -163,6 +163,8 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <None Include="packages.config" />
     <None Include="pbr.frag" />
     <None Include="pbr.vert" />
+    <None Include="skybox.frag" />
+    <None Include="skybox.vert" />
     <None Include="water.frag" />
     <None Include="water.vert" />
   </ItemGroup>
@@ -174,6 +176,7 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="ocean_floor.h" />
     <ClInclude Include="ShaderLoader.h" />
     <ClInclude Include="spline_path.h" />
+    <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

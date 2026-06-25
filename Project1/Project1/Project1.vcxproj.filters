@@ -33,11 +33,18 @@
     <ClCompile Include="light_rays.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
+    <ClCompile Include="fish.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="pbr.frag" />
     <None Include="pbr.vert" />
+    <None Include="water.frag" />
+    <None Include="water.vert" />
+    <None Include="skybox.vert" />
+    <None Include="skybox.frag" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="movement.h">
@@ -53,6 +60,15 @@
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="light_rays.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="fish.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="spline_path.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>

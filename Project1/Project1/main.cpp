@@ -16,10 +16,88 @@
 #include "spline_path.h"
 #include "fish.h"
 #include <cstddef>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+float skyboxVertices[] = {
+    // Positions          
+    -1.0f,  1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f, -1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f,
+    -1.0f, -1.0f,  1.0f,
+
+    -1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f, -1.0f,
+     1.0f,  1.0f,  1.0f,
+     1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f,  1.0f,
+    -1.0f,  1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f, -1.0f,
+     1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f,  1.0f,
+     1.0f, -1.0f,  1.0f
+};
+
+unsigned int loadCubemap(std::vector<std::string> faces) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++) {
+        unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+            // Notice how we add 'i' to the first target enum to loop through all 6 faces sequentially
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
+        else {
+            std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
+
+    // Set texture filtering and clamping properties
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
 
 int main() {
     auto programStart = std::chrono::high_resolution_clock::now();
@@ -56,6 +134,12 @@ int main() {
     GLuint waterShader = LoadShaders("water.vert", "water.frag");
     if (waterShader == 0) {
         std::cerr << "Blad ladowania shadera wody!" << std::endl;
+        return -1;
+    }
+
+    GLuint skyboxShader = LoadShaders("skybox.vert", "skybox.frag");
+    if (skyboxShader == 0) {
+        std::cerr << "Blad ladowania shadera skybox!" << std::endl;
         return -1;
     }
 
@@ -130,6 +214,31 @@ int main() {
     float pathProgress = 0.0f;
     float swimSpeed = 0.8f;
 
+
+    // Inicjalizacja skyboxa
+
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	std::vector<std::string> faces
+	{
+		"textures/skybox/px.png",
+		"textures/skybox/nx.png",
+		"textures/skybox/py.png",
+		"textures/skybox/ny.png",
+		"textures/skybox/pz.png",
+		"textures/skybox/nz.png"
+	};
+
+	unsigned int cubemapTextureID = loadCubemap(faces);
+    
+
     // Główna pętla renderowania
     while (!glfwWindowShouldClose(window)) {
 
@@ -140,7 +249,7 @@ int main() {
 
         glEnable(GL_DEPTH_TEST);
 
-        // Odpytujemy globalną zmienną cameraPos z movement.h
+
         if (cameraPos.y < 0.0f) {
             glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
             glEnable(GL_FOG);
@@ -301,9 +410,35 @@ int main() {
 
         draw_god_rays();
 
-        glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
+        glDisable(GL_FOG);
 
+		// Rysowanie skyboxa
+        glUseProgram(skyboxShader);
+        
+        // Get your current view matrix (with translation removed)
+        // Strip the translation component so the skybox stays centered around camera
+        glm::mat4 staticView = glm::mat4(glm::mat3(getViewMatrix()));
+
+        // Regenerate projection matrix matching your glFrustum calculation
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), aspect, nearPlane, farPlane);
+
+        // Pass matrices to skybox shader
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE, &staticView[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
+
+        // Bind skybox VAO and Cubemap Texture
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
+        glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+
+        // Render the cube
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glBindVertexArray(0);
+
+        glDepthMask(GL_TRUE);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
