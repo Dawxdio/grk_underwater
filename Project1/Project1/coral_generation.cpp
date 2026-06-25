@@ -48,6 +48,31 @@ void buildGpuSegmentsForCoral(CoralInstance& coral) {
 			glm::vec3 vb1 = b + norm1 * radius;
 			glm::vec3 vb2 = b + norm2 * radius;
 
+			float u1 = (float)j / segments;
+			float u2 = (float)(j + 1) / segments;
+
+			float v0 = 0.0f;
+			float v1 = len;
+
+			glm::vec3 tangent1 =
+				normalize(-x * sin(theta1) + y * cos(theta1));
+
+			glm::vec3 tangent2 =
+				normalize(-x * sin(theta2) + y * cos(theta2));
+
+			glm::vec3 bitangent = z;
+
+			// Trójkąt 1 (va1 -> vb1 -> va2)
+			totalVertices.push_back({ va1, norm1, glm::vec2(u1, v0), tangent1, bitangent });
+			totalVertices.push_back({ vb1, norm1, glm::vec2(u1, v1), tangent1, bitangent });
+			totalVertices.push_back({ va2, norm2, glm::vec2(u2, v0), tangent1, bitangent });
+
+			// Trójkąt 2 (va2 -> vb1 -> vb2)
+			totalVertices.push_back({ va2, norm2, glm::vec2(u2, v0), tangent1, bitangent });
+			totalVertices.push_back({ vb1, norm1, glm::vec2(u1, v1), tangent1, bitangent });
+			totalVertices.push_back({ vb2, norm2, glm::vec2(u2, v1), tangent1, bitangent });
+
+			/*
 			// Trójkąt 1 (va1 -> vb1 -> va2)
 			totalVertices.push_back({ va1, norm1, glm::vec2(0.0f) });
 			totalVertices.push_back({ vb1, norm1, glm::vec2(0.0f) });
@@ -57,6 +82,7 @@ void buildGpuSegmentsForCoral(CoralInstance& coral) {
 			totalVertices.push_back({ va2, norm2, glm::vec2(0.0f) });
 			totalVertices.push_back({ vb1, norm1, glm::vec2(0.0f) });
 			totalVertices.push_back({ vb2, norm2, glm::vec2(0.0f) });
+			*/
 		}
 	}
 
@@ -658,13 +684,16 @@ void generate_coral_reef(glm::vec2 min_bound, glm::vec2 max_bound, float density
 		CoralInstance new_coral;
 		bool loaded = loadRandomCoralFromFile(coral_type, new_coral);
 		if (!loaded) {
-			std::cerr << "Brak pliku lub blad parsowania dla typu korala: " << coral_type << ". Pomijam." << std::endl;
-			continue; // pomiń ten egzemplarz zamiast generować proceduralnie
+			// Jeśli plik nie istnieje lub parsowanie nie powiodlo sie, wygeneruj koral proceduralnie jako fallback
+			std::cerr << "Brak pliku corals_" << coral_type << ".json lub blad parsowania - używam generowania proceduralnego dla typu: " << coral_type << std::endl;
+			new_coral = generate_single_coral(coral_type, glm::vec3(0.0f));
 		}
 
 		// Ustaw pozycję/rotację na dnie w wyliczonym miejscu
 		new_coral.position = glm::vec3(x, y, z);
 		new_coral.rotationY = (rand() / (float)RAND_MAX) * 360.0f;
+		// Przypisz typ korala (używane później do wyboru tekstur)
+		new_coral.coralType = coral_type;
 
 		// Nie tworzymy VBO — renderer korzysta z węzłów CPU-side
 		new_coral.segmentVBO = 0;

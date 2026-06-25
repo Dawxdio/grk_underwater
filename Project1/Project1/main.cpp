@@ -16,6 +16,7 @@
 #include "spline_path.h"
 #include "fish.h"
 #include <cstddef>
+#include "TextureLoader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -146,6 +147,48 @@ int main() {
     GLuint waterVBO = 0;
     GLuint waterEBO = 0;
     int waterIndexCount = 0;
+
+    // Load per-type coral textures (normal + albedo). Types assumed in range 0..MAX_CORAL_TYPE (adjust if needed)
+    const int MAX_CORAL_TYPE = 4;
+    std::vector<GLuint> coralNormalMaps(MAX_CORAL_TYPE + 1, 0);
+    std::vector<GLuint> coralAlbedoMaps(MAX_CORAL_TYPE + 1, 0);
+
+    for (int t = 0; t <= MAX_CORAL_TYPE; ++t) {
+        std::string normalName = "coral_normal" + std::to_string(t) + ".png";
+        coralNormalMaps[t] = loadTexture(normalName.c_str());
+        std::string albedoName = "coral_texture" + std::to_string(t) + ".jpg";
+        coralAlbedoMaps[t] = loadTexture(albedoName.c_str());
+    }
+
+    // Load sand textures for ocean floor
+    GLuint sandNormalTex = loadTexture("sand_normal.png");
+    GLuint sandAlbedoTex = loadTexture("sand_texture.jpg");
+
+    // Fallback textures: neutral normal (128,128,255) and white albedo
+    GLuint fallbackNormal = 0;
+    GLuint fallbackAlbedo = 0;
+    {
+        unsigned char npx[3] = { 128, 128, 255 };
+        glGenTextures(1, &fallbackNormal);
+        glBindTexture(GL_TEXTURE_2D, fallbackNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, npx);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+    {
+        unsigned char apx[3] = { 255,255,255 };
+        glGenTextures(1, &fallbackAlbedo);
+        glBindTexture(GL_TEXTURE_2D, fallbackAlbedo);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, apx);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    // Set sampler bindings in shader (normal -> unit 0, albedo -> unit 1)
+    glUseProgram(pbrShader);
+    glUniform1i(glGetUniformLocation(pbrShader, "normalMap"), 0);
+    glUniform1i(glGetUniformLocation(pbrShader, "albedoMap"), 1);
+    glUseProgram(0);
 
     // Siatka dla powierzchni wody
     const int GRID_RES = 100;
@@ -325,13 +368,29 @@ int main() {
         for (const auto& coral : coralReef) {
             if (coral.segmentVBO == 0) continue;
 
+            int ctype = (coral.coralType >= 0 && coral.coralType <= MAX_CORAL_TYPE) ? coral.coralType : 0;
+            GLuint normalTex = coralNormalMaps[ctype] != 0 ? coralNormalMaps[ctype] : fallbackNormal;
+            GLuint albedoTex = coralAlbedoMaps[ctype] != 0 ? coralAlbedoMaps[ctype] : fallbackAlbedo;
+            bool hasAlbedo = (coralAlbedoMaps[ctype] != 0);
+
+            // Bind textures to units (shader expects normalMap->0, albedoMap->1)
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, normalTex);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, albedoTex);
+
+            // Jeśli mamy albedo texture - powiadom shader
+            glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), hasAlbedo ? 1 : 0);
+
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, coral.position);
             model = glm::rotate(model, glm::radians(coral.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
             glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &model[0][0]);
 
-            GLint albedoLoc = glGetUniformLocation(pbrShader, "albedo");
-            glUniform3fv(albedoLoc, 1, coral.config.color);
+            if (!hasAlbedo) {
+                GLint albedoLoc = glGetUniformLocation(pbrShader, "albedo");
+                glUniform3fv(albedoLoc, 1, coral.config.color);
+            }
 
             glUniform1f(glGetUniformLocation(pbrShader, "metallic"), 0.05f);
             glUniform1f(glGetUniformLocation(pbrShader, "roughness"), 0.85f);
@@ -341,18 +400,40 @@ int main() {
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, position));
             glEnableVertexAttribArray(1);
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, normal));
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, texCoords));
+            glEnableVertexAttribArray(3);
+            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, tangent));
+            glEnableVertexAttribArray(4);
+            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, bitangent));
 
             glDrawArrays(GL_TRIANGLES, 0, coral.segmentVertexCount);
 
             glDisableVertexAttribArray(0);
             glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(2);
+            glDisableVertexAttribArray(3);
+            glDisableVertexAttribArray(4);
+
         }
 
-        glUniform3f(glGetUniformLocation(pbrShader, "albedo"), 0.55f, 0.40f, 0.20f);
+        // Bind sand textures for ocean floor (normal->unit0, albedo->unit1)
+        GLuint bindNormal = (sandNormalTex != 0) ? sandNormalTex : fallbackNormal;
+        GLuint bindAlbedo = (sandAlbedoTex != 0) ? sandAlbedoTex : fallbackAlbedo;
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, bindNormal);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, bindAlbedo);
+        // Notify shader to use albedoMap for floor
+        glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), 1);
+
         glm::mat4 floorModel = glm::mat4(1.0f);
         glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &floorModel[0][0]);
 
         generate_ocean_floor();
+
+        // After drawing floor, disable albedoMap usage for subsequent objects unless set per-object
+        glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), 0);
 
         // Rysowanie ryby po spline
         pathProgress += swimSpeed * deltaTime;

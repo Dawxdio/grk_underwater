@@ -34,6 +34,8 @@ struct PbrVertex {
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec2 texCoords;
+	glm::vec3 tangent;
+	glm::vec3 bitangent;
 };
 
 struct CoralInstance {
@@ -41,6 +43,7 @@ struct CoralInstance {
 	CoralConfig config;
 	glm::vec3 position; // Miejsce na dnie (X, Y z bottomHeight, Z)
 	float rotationY;
+	int coralType; // typ korala (używane do wyboru tekstur)
 	unsigned int segmentVBO = 0; // GPU VBO with segment vertices (vec3 pairs)
 	int segmentVertexCount = 0;
 };
