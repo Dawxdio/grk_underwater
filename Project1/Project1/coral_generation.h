@@ -45,7 +45,6 @@ struct CoralInstance {
 	int segmentVertexCount = 0;
 };
 
-// Zewnętrzny dostęp do listy korali
 extern std::vector<CoralInstance> coralReef;
 
 // Generatory

@@ -152,6 +152,7 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="coral_generation.cpp" />
+    <ClCompile Include="fish.cpp" />
     <ClCompile Include="light_rays.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="movement.cpp" />
@@ -167,10 +168,12 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coral_generation.h" />
+    <ClInclude Include="fish.h" />
     <ClInclude Include="light_rays.h" />
     <ClInclude Include="movement.h" />
     <ClInclude Include="ocean_floor.h" />
     <ClInclude Include="ShaderLoader.h" />
+    <ClInclude Include="spline_path.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

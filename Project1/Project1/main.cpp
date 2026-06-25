@@ -14,6 +14,8 @@
 #include "ocean_floor.h"
 #include "ShaderLoader.h"
 #include "light_rays.h"
+#include "spline_path.h"
+#include "fish.h"
 #include <cstddef>
 
 #ifndef M_PI
@@ -26,7 +28,6 @@ int main() {
 
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
-    // Initialize the library
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
@@ -38,10 +39,9 @@ int main() {
     //writeCoralsOfType(1, 100);
     //writeCoralsOfType(2, 100);
     //writeCoralsOfType(3, 100);
-   // writeCoralsOfType(4, 100);
+    //writeCoralsOfType(4, 100);
     //writeCoralsOfType(-1, 100);
 
-    // Create a windowed mode window and its OpenGL context
     GLFWwindow* window = glfwCreateWindow(640, 480, "Hello OpenGL", NULL, NULL);
     if (!window) {
         glfwTerminate();
@@ -49,13 +49,13 @@ int main() {
         return -1;
     }
 
-    // Make the window's context current
 	
     glfwMakeContextCurrent(window);
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW!" << std::endl;
         return -1;
     }
+
     GLuint pbrShader = LoadShaders("pbr.vert", "pbr.frag");
     if (pbrShader == 0) {
         std::cerr << "Blad ladowania shadera PBR!" << std::endl;
@@ -72,8 +72,8 @@ int main() {
     GLuint waterEBO = 0;
     int waterIndexCount = 0;
 
-    // Tworzymy siatkę (grid) dla wody - prosty plane z indeksami
-    const int GRID_RES = 100; // rozdzielczość siatki (można zmniejszyć dla wydajności)
+    // Siatka dla powierzchni wody
+	const int GRID_RES = 100; // Rozdzielczość siatki
     const float SIZE = 50.0f;
     std::vector<float> verts;
     std::vector<unsigned int> inds;
@@ -93,7 +93,7 @@ int main() {
             int i1 = i0 + 1;
             int i2 = i0 + (GRID_RES + 1);
             int i3 = i2 + 1;
-            // two triangles
+			// Dwa trójkąty
             inds.push_back(i0);
             inds.push_back(i2);
             inds.push_back(i1);
@@ -104,7 +104,6 @@ int main() {
     }
     waterIndexCount = (int)inds.size();
 
-    // Upload to VBO/EBO
     glGenBuffers(1, (unsigned int*)&waterVBO);
     glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
     glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
@@ -114,8 +113,9 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, inds.size() * sizeof(unsigned int), inds.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    // testowanie wyglądu korali w scenie(te na powierzchni)
 
+
+    // Testowanie wyglądu korali w scenie (te na powierzchni)
     glm::vec2 min_obszar1(-5.0f, -5.0f);
     glm::vec2 max_obszar1(5.0f, 5.0f);
     float gestosc1 = 0.7f;
@@ -166,7 +166,7 @@ int main() {
             << "Kolor RGB: (" << coralReef[i].config.color[0] << ", " << coralReef[i].config.color[1] << ", " << coralReef[i].config.color[2] << ")"
             << std::endl;
     }
-    // Delta time
+
     float lastTime = (float)glfwGetTime();
 
     auto now = std::chrono::high_resolution_clock::now();
@@ -175,36 +175,51 @@ int main() {
 
     std::cout << "\rCzas programu: " << elapsedTime << " s" << std::flush;
 
-    // Loop until the user closes the window
+	// Deklaracja ścieżki spline dla ryby
+    SplinePath environmentPath;
+    environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
+    environmentPath.addPoint(glm::vec3(2.0f, -0.5f, -3.0f));
+    environmentPath.addPoint(glm::vec3(5.0f, -1.0f, -6.0f));
+    environmentPath.addPoint(glm::vec3(2.0f, -2.0f, -9.0f));
+    environmentPath.addPoint(glm::vec3(1.0f, -3.0f, -2.0f));
+    environmentPath.addPoint(glm::vec3(3.0f, -1.5f, 3.0f));
+    environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
+
+    Fish genericGoldfish;
+
+    float pathProgress = 0.0f;
+    float swimSpeed = 0.8f;
+
+
+	// Główna pętla renderowania
+
     while (!glfwWindowShouldClose(window)) {
 
 
 		processInput(window);
-        // Obliczanie czasu klatki
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
 
-        // Włączamy bufor głębokości
         glEnable(GL_DEPTH_TEST);
 
         if (cameraPos.y < 0.0f) {
             // Kamera pod wodą
             glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
 
-            // Włączamy mgłę zależną od odległości
+            // Mgła zależna od odległości
             glEnable(GL_FOG);
             GLfloat fogColor[4] = { 0.0f, 0.16f, 0.25f, 1.0f };
             glFogfv(GL_FOG_COLOR, fogColor);
             glFogi(GL_FOG_MODE, GL_EXP2);
             float baseDensity = 0.04f; // gęstość mgły
-            float density = baseDensity; // * (1.0f + 0.2f * sinf(currentTime * 1.5f));
+            float density = baseDensity * (1.0f + 0.2f * sinf(currentTime * 1.5f)); // lekkie falowanie
             glFogf(GL_FOG_DENSITY, density);
             glHint(GL_FOG_HINT, GL_NICEST);
         }
         else {
-            // Nad wodą: normalne niebo
+            // Niebo
             glDisable(GL_FOG);
             glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
         }
@@ -239,6 +254,7 @@ int main() {
             farPlane
         );
 
+
         // Widok kamery
 
         glMatrixMode(GL_MODELVIEW);
@@ -246,6 +262,7 @@ int main() {
 
         glm::mat4 viewMatrix = getViewMatrix();
         glLoadMatrixf(&viewMatrix[0][0]);
+
 
         // Mały czerwony znacznik w centrum
 
@@ -260,56 +277,53 @@ int main() {
 
         glEnd();
 
-        // 1. Aktywujemy Twój shader PBR
+
+		// Rysowanie obiektów z użyciem PBR Shadera
+
         glUseProgram(pbrShader);
 
-        // 2. Wyciągamy stare macierze z OpenGL 1.1, żeby pasowały do reszty programu grupy
+        // Wyciągamy stare macierze z OpenGL 1.1, żeby pasowały do reszty programu
         float modelview[16];
         float projection[16];
         glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
         glGetFloatv(GL_PROJECTION_MATRIX, projection);
 
-        // Przekazujemy macierze do Twojego vertex shadera
+        // Przekazujemy macierze do vertex shadera
         glUniformMatrix4fv(glGetUniformLocation(pbrShader, "view"), 1, GL_FALSE, modelview);
         glUniformMatrix4fv(glGetUniformLocation(pbrShader, "projection"), 1, GL_FALSE, projection);
 
         viewMatrix = getViewMatrix();
-        // Pozycja kamery to translacja zapisana w odwrotności macierzy widoku:
         glm::vec3 cameraPos = glm::vec3(glm::inverse(viewMatrix)[3]);
         glUniform1f(glGetUniformLocation(pbrShader, "time"), currentTime);
-        // Przekazanie do shadera:
+
         glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &cameraPos[0]);
-        // Ustawienie światła dla PBR (przykładowe pozycje)
+        // Ustawienie światła dla PBR
         glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), 0.0f, 10.0f, 0.0f);
         glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 150.0f, 150.0f, 150.0f); // Mocne światło PBR
         glUniform3f(glGetUniformLocation(pbrShader, "fogColor"), 0.0f, 0.3f, 0.6f); // Taki sam jak kolor wody/tła
         glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
 
-        // 3. Rysujemy każdy koral nowoczesną metodą z VBO
+        // Rysowanie korali
         for (const auto& coral : coralReef) {
             if (coral.segmentVBO == 0) continue;
 
-            // 1. Obliczanie i przekazywanie macierzy modelu (pozycja, rotacja)
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, coral.position);
             model = glm::rotate(model, glm::radians(coral.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
             glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &model[0][0]);
 
-            // 2. KLUCZOWE: Pobranie lokalizacji "albedo" z Twojego shadera i wysłanie koloru korala
             GLint albedoLoc = glGetUniformLocation(pbrShader, "albedo");
             glUniform3fv(albedoLoc, 1, coral.config.color);
 
-            // 3. Parametry PBR (chropowatość i metaliczność)
             glUniform1f(glGetUniformLocation(pbrShader, "metallic"), 0.05f);
             glUniform1f(glGetUniformLocation(pbrShader, "roughness"), 0.85f);
 
-            // 4. Bindowanie bufora VBO i rysowanie
             glBindBuffer(GL_ARRAY_BUFFER, coral.segmentVBO);
 
-            glEnableVertexAttribArray(0); // Pozycja
+            glEnableVertexAttribArray(0); // pozycja
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, position));
 
-            glEnableVertexAttribArray(1); // Normalne
+            glEnableVertexAttribArray(1); // normalne
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, normal));
 
             // Rysowanie geometrii
@@ -321,22 +335,37 @@ int main() {
 
         glUniform3f(glGetUniformLocation(pbrShader, "albedo"), 0.55f, 0.40f, 0.20f);
 
-        // Ustawiamy macierz modelu dla dna na tożsamościową (dno jest nieruchome w centrum świata)
+		// Macierz modelu dla dna (tożsamościowa, bo dno jest w stałej pozycji)
         glm::mat4 floorModel = glm::mat4(1.0f);
         glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &floorModel[0][0]);
 
-        // Rysujemy dno z aktywnym shaderem oświetlenia
+
+		// Rysowanie ryby poruszającej się po spline
+        
+        pathProgress += swimSpeed * deltaTime;
+
+        if (pathProgress > environmentPath.controlPoints.size() - 1) {
+            pathProgress = 0.0f;
+        }
+
+        glm::vec3 fishPosition = environmentPath.getPosition(pathProgress);
+        glm::vec3 fishDirection = environmentPath.getTangent(pathProgress);
+
+        genericGoldfish.draw(fishPosition, fishDirection, pbrShader);
+
+
         generate_ocean_floor();
 
+
+		// Rysowanie wody
+
         if (waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
-            // Włącz przezroczystość
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_FALSE);
 
             glUseProgram(waterShader);
 
-            // Obliczamy macierz projekcji tak jak wyżej
             float nearPlane = 0.1f;
             float farPlane = 100.0f;
             float fov = 60.0f;
@@ -346,11 +375,10 @@ int main() {
             float left = -right;
             glm::mat4 proj = glm::frustum(left, right, bottom, top, nearPlane, farPlane);
 
-            // Nie musimy ustawiać macierzy MVP — shader korzysta z gl_ModelViewProjectionMatrix
             int locTime = glGetUniformLocation(waterShader, "uTime");
             if (locTime >= 0) glUniform1f(locTime, currentTime);
 
-            // Falowe parametry
+			// Parametry fali na powierzchni wody
             int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.10f);
             int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
             int locSpeed1 = glGetUniformLocation(waterShader, "uSpeed1"); if (locSpeed1 >= 0) glUniform1f(locSpeed1, 0.5f);
@@ -364,7 +392,7 @@ int main() {
             int locB = glGetUniformLocation(waterShader, "uColB"); if (locB >= 0) glUniform1f(locB, 0.7f);
             int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.75f);
 
-            // Rysowanie za pomocą client arrays (kompatybilne z resztą kodu)
+            // Rysowanie za pomocą client arrays
             glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
             glEnableClientState(GL_VERTEX_ARRAY);
             glVertexPointer(3, GL_FLOAT, 0, (void*)0);
@@ -392,10 +420,9 @@ int main() {
 
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
-        // Swap front and back buffers
+
         glfwSwapBuffers(window);
 
-        // Poll for and process events
         glfwPollEvents();
     }
 
