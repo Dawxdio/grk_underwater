@@ -3,18 +3,13 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
-// Kamera i parametry ruchu (widoczne z innych modułów jeśli potrzebne)
 extern glm::vec3 cameraPos;
-extern glm::vec3 cameraFront;
-extern glm::vec3 cameraUp;
+extern glm::quat cameraQuat;
 
-extern float yaw;
-extern float movementSpeed;
-extern float rotationSpeed;
-
-// Przetwarzanie wejścia (klawiatura) i pobranie macierzy widoku
 void processInput(GLFWwindow* window);
 glm::mat4 getViewMatrix();
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 
-#endif // MOVEMENT_H
+#endif
