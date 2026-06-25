@@ -336,6 +336,9 @@ int main() {
 	unsigned int cubemapTextureID = loadCubemap(faces);
     unsigned int turtleTextureID = loadTexture2D("textures/tutle/body_Base_color.png");
 
+    bool startCoralGrowth = false;
+    float coralGrowthFactor = 0.0f; // 0.0 = brak korala, 1.0 = koral w pełni wyrośnięty
+    const float GROWTH_SPEED = 0.2f;
     // Główna pętla renderowania
     while (!glfwWindowShouldClose(window)) {
 
@@ -427,7 +430,8 @@ int main() {
         glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
 
         // Rysowanie korali
-        for (const auto& coral : coralReef) {
+        for (size_t i = 0; i < coralReef.size(); i++) {
+            const auto& coral = coralReef[i];
             if (coral.segmentVBO == 0) continue;
 
             int ctype = (coral.coralType >= 0 && coral.coralType <= MAX_CORAL_TYPE) ? coral.coralType : 0;
@@ -435,13 +439,11 @@ int main() {
             GLuint albedoTex = coralAlbedoMaps[ctype] != 0 ? coralAlbedoMaps[ctype] : fallbackAlbedo;
             bool hasAlbedo = (coralAlbedoMaps[ctype] != 0);
 
-            // Bind textures to units (shader expects normalMap->0, albedoMap->1)
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, normalTex);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, albedoTex);
 
-            // Jeśli mamy albedo texture - powiadom shader
             glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), hasAlbedo ? 1 : 0);
 
             glm::mat4 model = glm::mat4(1.0f);
@@ -469,14 +471,29 @@ int main() {
             glEnableVertexAttribArray(4);
             glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, bitangent));
 
-            glDrawArrays(GL_TRIANGLES, 0, coral.segmentVertexCount);
+            const int VERTICES_PER_CYLINDER = 60;
+
+            int totalCylinders = coral.segmentVertexCount / VERTICES_PER_CYLINDER;
+            if (totalCylinders < 1) totalCylinders = 1;
+
+            int visibleCylinders = int(totalCylinders * coralGrowthFactor);
+            int verticesToDraw = visibleCylinders * VERTICES_PER_CYLINDER;
+
+            if (verticesToDraw == 0 && coralGrowthFactor > 0.001f) {
+                verticesToDraw = VERTICES_PER_CYLINDER;
+            }
+            // Zabezpieczenie przed wyjściem poza zakres bufora
+            if (verticesToDraw > coral.segmentVertexCount) {
+                verticesToDraw = coral.segmentVertexCount;
+            }
+
+            glDrawArrays(GL_TRIANGLES, 0, verticesToDraw);
 
             glDisableVertexAttribArray(0);
             glDisableVertexAttribArray(1);
             glDisableVertexAttribArray(2);
             glDisableVertexAttribArray(3);
             glDisableVertexAttribArray(4);
-
         }
 
         // Bind sand textures for ocean floor (normal->unit0, albedo->unit1)
