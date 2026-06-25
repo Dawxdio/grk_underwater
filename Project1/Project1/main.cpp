@@ -185,7 +185,7 @@ int main() {
     environmentPath.addPoint(glm::vec3(3.0f, -1.5f, 3.0f));
     environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
 
-    Fish genericGoldfish;
+    Fish genericFish;
 
     float pathProgress = 0.0f;
     float swimSpeed = 0.8f;
@@ -214,7 +214,7 @@ int main() {
             glFogfv(GL_FOG_COLOR, fogColor);
             glFogi(GL_FOG_MODE, GL_EXP2);
             float baseDensity = 0.04f; // gęstość mgły
-            float density = baseDensity * (1.0f + 0.2f * sinf(currentTime * 1.5f)); // lekkie falowanie
+            float density = baseDensity;// *(1.0f + 0.2f * sinf(currentTime * 1.5f)); // lekkie falowanie
             glFogf(GL_FOG_DENSITY, density);
             glHint(GL_FOG_HINT, GL_NICEST);
         }
@@ -339,6 +339,7 @@ int main() {
         glm::mat4 floorModel = glm::mat4(1.0f);
         glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &floorModel[0][0]);
 
+        generate_ocean_floor();
 
 		// Rysowanie ryby poruszającej się po spline
         
@@ -351,10 +352,8 @@ int main() {
         glm::vec3 fishPosition = environmentPath.getPosition(pathProgress);
         glm::vec3 fishDirection = environmentPath.getTangent(pathProgress);
 
-        genericGoldfish.draw(fishPosition, fishDirection, pbrShader);
+        genericFish.draw(fishPosition, fishDirection, pbrShader);
 
-
-        generate_ocean_floor();
 
 
 		// Rysowanie wody
