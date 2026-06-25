@@ -144,6 +144,8 @@ unsigned int loadTexture2D(const char* path) {
     return textureID;
 }
 
+glm::vec3 sunPos(-24.0f, 30.0f, -60.0f);
+
 int main() {
     auto programStart = std::chrono::high_resolution_clock::now();
 
@@ -339,6 +341,7 @@ int main() {
     bool startCoralGrowth = false;
     float coralGrowthFactor = 0.0f; // 0.0 = brak korala, 1.0 = koral w pełni wyrośnięty
     const float GROWTH_SPEED = 0.2f;
+
     // Główna pętla renderowania
     while (!glfwWindowShouldClose(window)) {
 
@@ -348,6 +351,22 @@ int main() {
         lastTime = currentTime;
 
         glEnable(GL_DEPTH_TEST);
+
+        if (cameraPos.y < 0.0f) {
+            glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
+            glEnable(GL_FOG);
+            GLfloat fogColor[4] = { 0.0f, 0.16f, 0.25f, 1.0f };
+            glFogfv(GL_FOG_COLOR, fogColor);
+            glFogi(GL_FOG_MODE, GL_EXP2);
+            float baseDensity = 0.04f;
+            float density = baseDensity * (1.0f + 0.2f * sinf(currentTime * 1.5f));
+            glFogf(GL_FOG_DENSITY, density);
+            glHint(GL_FOG_HINT, GL_NICEST);
+        }
+        else {
+            glDisable(GL_FOG);
+            glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+        }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -424,7 +443,7 @@ int main() {
         glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &shaderCameraPos[0]);
 
         glUniform1f(glGetUniformLocation(pbrShader, "time"), currentTime);
-        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), -25.0f, 50.0f, -60.0f);
+        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), sunPos.x, sunPos.y, sunPos.z);
         glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 300.0f, 300.0f, 300.0f);
         glUniform3f(glGetUniformLocation(pbrShader, "fogColor"), 0.0f, 0.3f, 0.6f);
         glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
@@ -543,20 +562,20 @@ int main() {
             int locTime = glGetUniformLocation(waterShader, "uTime");
             if (locTime >= 0) glUniform1f(locTime, currentTime);
 
-            glUniform3f(glGetUniformLocation(waterShader, "uLightDir"), -25.0f, 50.0f, -60.0f);
+            glUniform3f(glGetUniformLocation(waterShader, "uLightDir"), sunPos.x, sunPos.y, sunPos.z);
             glUniform3fv(glGetUniformLocation(waterShader, "uViewPos"), 1, &shaderCameraPos[0]);
 
-            int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.10f);
+            int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.2f);
             int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
             int locSpeed1 = glGetUniformLocation(waterShader, "uSpeed1"); if (locSpeed1 >= 0) glUniform1f(locSpeed1, 0.5f);
-            int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.05f);
+            int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.1f);
             int locFreq2 = glGetUniformLocation(waterShader, "uFreq2"); if (locFreq2 >= 0) glUniform1f(locFreq2, 0.08f);
             int locSpeed2 = glGetUniformLocation(waterShader, "uSpeed2"); if (locSpeed2 >= 0) glUniform1f(locSpeed2, 0.9f);
 
             int locR = glGetUniformLocation(waterShader, "uColR"); if (locR >= 0) glUniform1f(locR, 0.0f);
-            int locG = glGetUniformLocation(waterShader, "uColG"); if (locG >= 0) glUniform1f(locG, 0.35f);
+            int locG = glGetUniformLocation(waterShader, "uColG"); if (locG >= 0) glUniform1f(locG, 0.4f);
             int locB = glGetUniformLocation(waterShader, "uColB"); if (locB >= 0) glUniform1f(locB, 0.7f);
-            int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.75f);
+            int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.7f);
 
             glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
             glEnableClientState(GL_VERTEX_ARRAY);

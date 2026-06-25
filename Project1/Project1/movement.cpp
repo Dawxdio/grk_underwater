@@ -17,8 +17,8 @@ float lastX = 400.0f, lastY = 300.0f;
 bool firstMouse = true;
 
 // Funkcja callback dla myszy
-float totalYaw = -90.0f;  // Początkowy yaw (taki sam jak miałeś na początku)
-float totalPitch = 0.0f;  // Początkowy pitch (patrzymy na wprost)
+float totalYaw = 0.0f;  // Początkowy yaw
+float totalPitch = 0.0f;  // Początkowy pitch
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
