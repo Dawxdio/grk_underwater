@@ -58,9 +58,62 @@ int main() {
     }
     GLuint pbrShader = LoadShaders("pbr.vert", "pbr.frag");
     if (pbrShader == 0) {
-        std::cerr << "Blad ladowania shadera!" << std::endl;
+        std::cerr << "Blad ladowania shadera PBR!" << std::endl;
         return -1;
     }
+
+	GLuint waterShader = LoadShaders("water.vert", "water.frag");
+    if (waterShader == 0) {
+        std::cerr << "Blad ladowania shadera wody!" << std::endl;
+        return -1;
+    }
+
+	GLuint waterVBO = 0;
+    GLuint waterEBO = 0;
+    int waterIndexCount = 0;
+
+    // Tworzymy siatkę (grid) dla wody - prosty plane z indeksami
+    const int GRID_RES = 100; // rozdzielczość siatki (można zmniejszyć dla wydajności)
+    const float SIZE = 50.0f;
+    std::vector<float> verts;
+    std::vector<unsigned int> inds;
+    verts.reserve((GRID_RES + 1) * (GRID_RES + 1) * 3);
+    for (int z = 0; z <= GRID_RES; ++z) {
+        for (int x = 0; x <= GRID_RES; ++x) {
+            float fx = ((float)x / (float)GRID_RES) * 2.0f * SIZE - SIZE;
+            float fz = ((float)z / (float)GRID_RES) * 2.0f * SIZE - SIZE;
+            verts.push_back(fx);
+            verts.push_back(0.0f);
+            verts.push_back(fz);
+        }
+    }
+    for (int z = 0; z < GRID_RES; ++z) {
+        for (int x = 0; x < GRID_RES; ++x) {
+            int i0 = z * (GRID_RES + 1) + x;
+            int i1 = i0 + 1;
+            int i2 = i0 + (GRID_RES + 1);
+            int i3 = i2 + 1;
+            // two triangles
+            inds.push_back(i0);
+            inds.push_back(i2);
+            inds.push_back(i1);
+            inds.push_back(i1);
+            inds.push_back(i2);
+            inds.push_back(i3);
+        }
+    }
+    waterIndexCount = (int)inds.size();
+
+    // Upload to VBO/EBO
+    glGenBuffers(1, (unsigned int*)&waterVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
+    glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glGenBuffers(1, (unsigned int*)&waterEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, inds.size() * sizeof(unsigned int), inds.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     // testowanie wyglądu korali w scenie(te na powierzchni)
 
     glm::vec2 min_obszar1(-5.0f, -5.0f);
@@ -136,8 +189,26 @@ int main() {
         // Włączamy bufor głębokości
         glEnable(GL_DEPTH_TEST);
 
-        // Niebo
-        glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+        if (cameraPos.y < 0.0f) {
+            // Kamera pod wodą
+            glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
+
+            // Włączamy mgłę zależną od odległości
+            glEnable(GL_FOG);
+            GLfloat fogColor[4] = { 0.0f, 0.16f, 0.25f, 1.0f };
+            glFogfv(GL_FOG_COLOR, fogColor);
+            glFogi(GL_FOG_MODE, GL_EXP2);
+            float baseDensity = 0.04f; // gęstość mgły
+            float density = baseDensity; // * (1.0f + 0.2f * sinf(currentTime * 1.5f));
+            glFogf(GL_FOG_DENSITY, density);
+            glHint(GL_FOG_HINT, GL_NICEST);
+        }
+        else {
+            // Nad wodą: normalne niebo
+            glDisable(GL_FOG);
+            glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+        }
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Macierz projekcji
@@ -175,18 +246,6 @@ int main() {
 
         glm::mat4 viewMatrix = getViewMatrix();
         glLoadMatrixf(&viewMatrix[0][0]);
-        // Powierzchnia wody (duży kwadrat)
-
-        glColor3f(0.0f, 0.3f, 0.8f);
-
-        glBegin(GL_QUADS);
-
-        glVertex3f(-50.0f, 0.0f, -50.0f);
-        glVertex3f(50.0f, 0.0f, -50.0f);
-        glVertex3f(50.0f, 0.0f, 50.0f);
-        glVertex3f(-50.0f, 0.0f, 50.0f);
-
-        glEnd();
 
         // Mały czerwony znacznik w centrum
 
@@ -268,6 +327,59 @@ int main() {
 
         // Rysujemy dno z aktywnym shaderem oświetlenia
         generate_ocean_floor();
+
+        if (waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
+            // Włącz przezroczystość
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+
+            glUseProgram(waterShader);
+
+            // Obliczamy macierz projekcji tak jak wyżej
+            float nearPlane = 0.1f;
+            float farPlane = 100.0f;
+            float fov = 60.0f;
+            float top = tan(fov * M_PI / 360.0f) * nearPlane;
+            float bottom = -top;
+            float right = top * ((float)width / (float)height);
+            float left = -right;
+            glm::mat4 proj = glm::frustum(left, right, bottom, top, nearPlane, farPlane);
+
+            // Nie musimy ustawiać macierzy MVP — shader korzysta z gl_ModelViewProjectionMatrix
+            int locTime = glGetUniformLocation(waterShader, "uTime");
+            if (locTime >= 0) glUniform1f(locTime, currentTime);
+
+            // Falowe parametry
+            int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.10f);
+            int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
+            int locSpeed1 = glGetUniformLocation(waterShader, "uSpeed1"); if (locSpeed1 >= 0) glUniform1f(locSpeed1, 0.5f);
+            int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.05f);
+            int locFreq2 = glGetUniformLocation(waterShader, "uFreq2"); if (locFreq2 >= 0) glUniform1f(locFreq2, 0.08f);
+            int locSpeed2 = glGetUniformLocation(waterShader, "uSpeed2"); if (locSpeed2 >= 0) glUniform1f(locSpeed2, 0.9f);
+
+            // Kolor wody (poszczególne składowe)
+            int locR = glGetUniformLocation(waterShader, "uColR"); if (locR >= 0) glUniform1f(locR, 0.0f);
+            int locG = glGetUniformLocation(waterShader, "uColG"); if (locG >= 0) glUniform1f(locG, 0.35f);
+            int locB = glGetUniformLocation(waterShader, "uColB"); if (locB >= 0) glUniform1f(locB, 0.7f);
+            int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.75f);
+
+            // Rysowanie za pomocą client arrays (kompatybilne z resztą kodu)
+            glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
+            glEnableClientState(GL_VERTEX_ARRAY);
+            glVertexPointer(3, GL_FLOAT, 0, (void*)0);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
+            glDrawElements(GL_TRIANGLES, waterIndexCount, GL_UNSIGNED_INT, 0);
+
+            glDisableClientState(GL_VERTEX_ARRAY);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+            glUseProgram(0);
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+        }
 
         glUseProgram(0);
 

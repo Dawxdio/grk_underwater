@@ -162,6 +162,8 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <None Include="packages.config" />
     <None Include="pbr.frag" />
     <None Include="pbr.vert" />
+    <None Include="water.frag" />
+    <None Include="water.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coral_generation.h" />
