@@ -74,13 +74,22 @@ unsigned int loadCubemap(std::vector<std::string> faces) {
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
+    // Ensure STB doesn't flip cubemaps vertically (cubemap coordinates differ from 2D textures)
+    stbi_set_flip_vertically_on_load(false);
+
     int width, height, nrChannels;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     for (unsigned int i = 0; i < faces.size(); i++) {
         unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
         if (data) {
-            // Notice how we add 'i' to the first target enum to loop through all 6 faces sequentially
+            // Dynamically assign the format based on the image's actual channels
+            GLenum format = GL_RGB;
+            if (nrChannels == 1) format = GL_RED;
+            else if (nrChannels == 3) format = GL_RGB;
+            else if (nrChannels == 4) format = GL_RGBA;
+
             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+                0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             stbi_image_free(data);
         }
         else {
@@ -304,7 +313,8 @@ int main() {
 
 
         if (cameraPos.y < 0.0f) {
-            glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
+            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            //glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
             glEnable(GL_FOG);
             GLfloat fogColor[4] = { 0.0f, 0.16f, 0.25f, 1.0f };
             glFogfv(GL_FOG_COLOR, fogColor);
@@ -314,7 +324,8 @@ int main() {
         }
         else {
             glDisable(GL_FOG);
-            glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
+            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            //glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -344,6 +355,29 @@ int main() {
 
         glm::mat4 viewMatrix = getViewMatrix();
         glLoadMatrixf(&viewMatrix[0][0]);
+
+        // Rysowanie skyboxa
+        glDepthFunc(GL_LEQUAL);
+        glUseProgram(skyboxShader);
+
+        glm::mat4 staticView = glm::mat4(glm::mat3(getViewMatrix()));
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), aspect, nearPlane, farPlane);
+
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE, &staticView[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
+
+        glBindVertexArray(skyboxVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
+        glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glBindVertexArray(0);
+
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
+
 
         // Czerwony znacznik
         glColor3f(1.0f, 0.0f, 0.0f);
@@ -511,34 +545,8 @@ int main() {
         draw_god_rays();
 
         glDisable(GL_BLEND);
-        glDisable(GL_FOG);
-
-		// Rysowanie skyboxa
-        glUseProgram(skyboxShader);
-        
-        // Get your current view matrix (with translation removed)
-        // Strip the translation component so the skybox stays centered around camera
-        glm::mat4 staticView = glm::mat4(glm::mat3(getViewMatrix()));
-
-        // Regenerate projection matrix matching your glFrustum calculation
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(60.0f), aspect, nearPlane, farPlane);
-
-        // Pass matrices to skybox shader
-        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"), 1, GL_FALSE, &staticView[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"), 1, GL_FALSE, &projectionMatrix[0][0]);
-
-        // Bind skybox VAO and Cubemap Texture
-        glBindVertexArray(skyboxVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
-        glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
-
-        // Render the cube
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        glBindVertexArray(0);
-
         glDepthMask(GL_TRUE);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
