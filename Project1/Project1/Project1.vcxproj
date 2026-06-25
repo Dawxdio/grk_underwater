@@ -152,6 +152,7 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="coral_generation.cpp" />
+    <ClCompile Include="light_rays.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="movement.cpp" />
     <ClCompile Include="ocean_floor.cpp" />
@@ -164,6 +165,7 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coral_generation.h" />
+    <ClInclude Include="light_rays.h" />
     <ClInclude Include="movement.h" />
     <ClInclude Include="ocean_floor.h" />
     <ClInclude Include="ShaderLoader.h" />

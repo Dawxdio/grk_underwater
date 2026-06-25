@@ -13,6 +13,7 @@
 #include "coral_generation.h"
 #include "ocean_floor.h"
 #include "ShaderLoader.h"
+#include "light_rays.h"
 #include <cstddef>
 
 #ifndef M_PI
@@ -268,9 +269,17 @@ int main() {
         // Rysujemy dno z aktywnym shaderem oświetlenia
         generate_ocean_floor();
 
-        // Dopiero po narysowaniu dna wyłączamy shader dla wody/znacznika starego typu
         glUseProgram(0);
 
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+        glDepthMask(GL_FALSE);
+
+        draw_god_rays();
+
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
         // Swap front and back buffers
         glfwSwapBuffers(window);
 
