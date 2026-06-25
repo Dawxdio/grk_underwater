@@ -1,6 +1,4 @@
 ﻿  main.cpp
-C:\Users\Kostek\source\repos\grk_underwater\Project1\Project1\main.cpp(369,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
-  turtle.cpp
-C:\Users\Kostek\source\repos\grk_underwater\Project1\Project1\turtle.cpp(30,38): warning C4267: "=": konwersja z "size_t" do "int", możliwa utrata danych
-  Generowanie kodu...
-  Project1.vcxproj -> C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\Project1.exe
+C:\Users\Laptop\Documents\Studia\grk_underwater\Project1\Project1\main.cpp(363,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+  Project1.vcxproj -> C:\Users\Laptop\Documents\Studia\grk_underwater\Project1\x64\Debug\Project1.exe
+  C:\Users\Laptop\Documents\Studia\grk_underwater\Project1\x64\Debug\Project1.exe: message: wdrażanie zależności

@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>
+#include <iostream>
 
 // Pozycja i orientacja kamery (jako kwaternion)
 glm::vec3 cameraPos = glm::vec3(0.0f, 2.0f, 5.0f);

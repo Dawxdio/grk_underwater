@@ -346,23 +346,6 @@ int main() {
 
         glEnable(GL_DEPTH_TEST);
 
-
-        if (cameraPos.y < 0.0f) {
-            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-            //glClearColor(0.0f, 0.16f, 0.25f, 1.0f);
-            glEnable(GL_FOG);
-            GLfloat fogColor[4] = { 0.0f, 0.16f, 0.25f, 1.0f };
-            glFogfv(GL_FOG_COLOR, fogColor);
-            glFogi(GL_FOG_MODE, GL_EXP2);
-            glFogf(GL_FOG_DENSITY, 0.04f);
-            glHint(GL_FOG_HINT, GL_NICEST);
-        }
-        else {
-            glDisable(GL_FOG);
-            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-            //glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
-        }
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Macierz projekcji
@@ -438,8 +421,8 @@ int main() {
         glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &shaderCameraPos[0]);
 
         glUniform1f(glGetUniformLocation(pbrShader, "time"), currentTime);
-        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), 0.0f, 10.0f, 0.0f);
-        glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 150.0f, 150.0f, 150.0f);
+        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), -25.0f, 50.0f, -60.0f);
+        glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 300.0f, 300.0f, 300.0f);
         glUniform3f(glGetUniformLocation(pbrShader, "fogColor"), 0.0f, 0.3f, 0.6f);
         glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
 
@@ -542,6 +525,9 @@ int main() {
 
             int locTime = glGetUniformLocation(waterShader, "uTime");
             if (locTime >= 0) glUniform1f(locTime, currentTime);
+
+            glUniform3f(glGetUniformLocation(waterShader, "uLightDir"), -25.0f, 50.0f, -60.0f);
+            glUniform3fv(glGetUniformLocation(waterShader, "uViewPos"), 1, &shaderCameraPos[0]);
 
             int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.10f);
             int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
