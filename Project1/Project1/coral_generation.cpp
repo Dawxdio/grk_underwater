@@ -86,6 +86,59 @@ void buildGpuSegmentsForCoral(CoralInstance& coral) {
 		}
 	}
 
+	// Add caps on ends (root and leaf nodes) to hide hollow centers
+	{
+		// Determine which nodes are parents
+		std::vector<bool> isParent(coral.nodes.size(), false);
+		for (size_t i = 0; i < coral.nodes.size(); ++i) {
+			int p = coral.nodes[i].parentIndex;
+			if (p >= 0 && p < (int)coral.nodes.size()) isParent[p] = true;
+		}
+
+		std::vector<size_t> capIndices;
+		// root nodes (parentIndex == -1)
+		for (size_t i = 0; i < coral.nodes.size(); ++i) if (coral.nodes[i].parentIndex == -1) capIndices.push_back(i);
+		// leaf nodes (not parent of anyone)
+		for (size_t i = 0; i < coral.nodes.size(); ++i) if (!isParent[i]) capIndices.push_back(i);
+
+		int capSegments = segments;
+		for (size_t idx : capIndices) {
+			const Node& n = coral.nodes[idx];
+			glm::vec3 center(n.x, n.y, n.z);
+			glm::vec3 axis(0.0f, 1.0f, 0.0f);
+			// choose axis from neighbor if possible
+			if (n.parentIndex >= 0 && n.parentIndex < (int)coral.nodes.size()) axis = glm::normalize(center - glm::vec3(coral.nodes[n.parentIndex].x, coral.nodes[n.parentIndex].y, coral.nodes[n.parentIndex].z));
+			else {
+				// try child
+				for (size_t j = 0; j < coral.nodes.size(); ++j) if (coral.nodes[j].parentIndex == (int)idx) { axis = glm::normalize(glm::vec3(coral.nodes[j].x, coral.nodes[j].y, coral.nodes[j].z) - center); break; }
+			}
+			if (glm::length(axis) < 1e-6f) axis = glm::vec3(0.0f, 1.0f, 0.0f);
+			glm::vec3 tmp = (fabs(axis.x) < 0.0001f && fabs(axis.y) < 0.0001f) ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(0.0f, 0.0f, 1.0f);
+			glm::vec3 x = glm::normalize(glm::cross(tmp, axis));
+			glm::vec3 y = glm::normalize(glm::cross(axis, x));
+
+			// center vertex
+			PbrVertex centerV; centerV.position = center; centerV.normal = axis; centerV.texCoords = glm::vec2(0.5f, 0.5f); centerV.tangent = x; centerV.bitangent = y;
+			// create ring
+			std::vector<PbrVertex> ring(capSegments + 1);
+			for (int j = 0; j <= capSegments; ++j) {
+				float theta = (float)j / (float)capSegments * 2.0f * 3.14159265f;
+				glm::vec3 off = x * cosf(theta) * radius + y * sinf(theta) * radius;
+				ring[j].position = center + off;
+				ring[j].normal = axis;
+				ring[j].texCoords = glm::vec2(0.5f + 0.5f * cosf(theta), 0.5f + 0.5f * sinf(theta));
+				ring[j].tangent = x;
+				ring[j].bitangent = y;
+			}
+			// add triangles fan
+			for (int j = 0; j < capSegments; ++j) {
+				totalVertices.push_back(centerV);
+				totalVertices.push_back(ring[j + 1]);
+				totalVertices.push_back(ring[j]);
+			}
+		}
+	}
+
 	if (totalVertices.empty()) {
 		coral.segmentVBO = 0;
 		coral.segmentVertexCount = 0;

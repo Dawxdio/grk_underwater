@@ -1,9 +1,18 @@
-﻿  main.cpp
-C:\Users\Kostek\source\repos\grk_underwater\Project1\Project1\main.cpp(334,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+﻿  coral_generation.cpp
+D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\Project1\coral_generation.cpp(609,30): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+  fish.cpp
+D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\Project1\fish.cpp(28,35): warning C4267: "=": konwersja z "size_t" do "int", możliwa utrata danych
+  light_rays.cpp
+  main.cpp
+D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\Project1\main.cpp(334,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
   model_loader.cpp
+  movement.cpp
+  ocean_floor.cpp
+  ShaderLoader.cpp
   turtle.cpp
-C:\Users\Kostek\source\repos\grk_underwater\Project1\Project1\turtle.cpp(30,38): warning C4267: "=": konwersja z "size_t" do "int", możliwa utrata danych
+D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\Project1\turtle.cpp(30,38): warning C4267: "=": konwersja z "size_t" do "int", możliwa utrata danych
   Generowanie kodu...
-glew32sd.lib(glew.obj) : warning LNK4099: nie znaleziono pliku PDB "glew_static.pdb" z elementem "glew32sd.lib(glew.obj)" lub w pozycji "C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\glew_static.pdb"; obiekt zostanie skonsolidowany bez informacji debugowania
-LINK : warning LNK4098: domyślna biblioteka "MSVCRT" powoduje konflikt z innymi bibliotekami; użyj opcji /NODEFAULTLIB:biblioteka
-  Project1.vcxproj -> C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\Project1.exe
+  LINK : nie znaleziono elementu D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\x64\Debug\Project1.exe ani nie został on skompilowany podczas ostatniego konsolidowania przyrostowego; zostanie wykonana pełna konsolidacja
+glew32sd.lib(glew.obj) : warning LNK4099: nie znaleziono pliku PDB „glew_static.pdb” z elementem „glew32sd.lib(glew.obj)” lub w pozycji „D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\x64\Debug\glew_static.pdb”; obiekt zostanie skonsolidowany bez informacji debugowania
+LINK : warning LNK4098: domyślna biblioteka „MSVCRT” powoduje konflikt z innymi bibliotekami; użyj opcji /NODEFAULTLIB:biblioteka
+  Project1.vcxproj -> D:\rzeczy_wlasne\szkola\studia\semestr4\grafika\grk_underwater\Project1\x64\Debug\Project1.exe
