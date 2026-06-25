@@ -108,6 +108,41 @@ unsigned int loadCubemap(std::vector<std::string> faces) {
     return textureID;
 }
 
+unsigned int loadTexture2D(const char* path) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrChannels;
+    // Odwracamy teksturę pionowo, bo OpenGL czyta od dołu do góry, a pliki graficzne od góry do dołu
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+
+    if (data) {
+        GLenum format = GL_RGB;
+        if (nrChannels == 1) format = GL_RED;
+        else if (nrChannels == 3) format = GL_RGB;
+        else if (nrChannels == 4) format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else {
+        std::cout << "Blad wczytywania tekstury pod sciezka: " << path << std::endl;
+        stbi_image_free(data);
+    }
+    // Przywracamy domyślne zachowanie dla skyboxa
+    stbi_set_flip_vertically_on_load(false);
+
+    return textureID;
+}
 
 int main() {
     auto programStart = std::chrono::high_resolution_clock::now();
@@ -299,7 +334,7 @@ int main() {
 	};
 
 	unsigned int cubemapTextureID = loadCubemap(faces);
-    
+    unsigned int turtleTextureID = loadTexture2D("textures/tutle/body_Base_color.png");
 
     // Główna pętla renderowania
     while (!glfwWindowShouldClose(window)) {
@@ -494,8 +529,8 @@ int main() {
         }
 
         // Podajemy nową ścieżkę jako argument metody update
-        myTurtle.update(turtleProgress, turtlePath);
-        myTurtle.draw(pbrShader);
+        myTurtle.update(turtleProgress, turtlePath); // tutaj używasz nowej trasy, którą zrobiliśmy krok wcześniej
+        myTurtle.draw(pbrShader, turtleTextureID);   // przekazujemy ID tekstury
 
         // Rysowanie wody
         if (waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
