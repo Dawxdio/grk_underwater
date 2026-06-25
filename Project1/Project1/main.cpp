@@ -19,7 +19,7 @@
 #include "TextureLoader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
+#include "turtle.h"
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -253,11 +253,21 @@ int main() {
     environmentPath.addPoint(glm::vec3(3.0f, -1.5f, 3.0f));
     environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
 
+    SplinePath turtlePath;
+    turtlePath.addPoint(glm::vec3(-10.0f, -4.0f, -5.0f));
+    turtlePath.addPoint(glm::vec3(-5.0f, -3.5f, -12.0f));
+    turtlePath.addPoint(glm::vec3(4.0f, -5.0f, -8.0f));
+    turtlePath.addPoint(glm::vec3(8.0f, -3.0f, 2.0f));
+    turtlePath.addPoint(glm::vec3(0.0f, -4.5f, 10.0f));
+    turtlePath.addPoint(glm::vec3(-8.0f, -5.0f, 4.0f));
+    turtlePath.addPoint(glm::vec3(-10.0f, -4.0f, -5.0f));
+
     Fish genericFish;
     float pathProgress = 0.0f;
     float swimSpeed = 0.8f;
 
-
+    Turtle myTurtle;
+    float turtleProgress = 0.0f;
     // Inicjalizacja skyboxa
 
     unsigned int skyboxVAO, skyboxVBO;
@@ -443,6 +453,15 @@ int main() {
         glm::vec3 fishPosition = environmentPath.getPosition(pathProgress);
         glm::vec3 fishDirection = environmentPath.getTangent(pathProgress);
         genericFish.draw(fishPosition, fishDirection, pbrShader);
+
+        turtleProgress += (swimSpeed * 0.5f) * deltaTime; // Żółw pływa wolniej
+        if (turtleProgress > turtlePath.controlPoints.size() - 1) {
+            turtleProgress = 0.0f;
+        }
+
+        // Podajemy nową ścieżkę jako argument metody update
+        myTurtle.update(turtleProgress, turtlePath);
+        myTurtle.draw(pbrShader);
 
         // Rysowanie wody
         if (waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
