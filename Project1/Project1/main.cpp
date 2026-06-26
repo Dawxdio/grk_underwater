@@ -201,15 +201,15 @@ int main() {
     std::vector<GLuint> coralAlbedoMaps(MAX_CORAL_TYPE + 1, 0);
 
     for (int t = 0; t <= MAX_CORAL_TYPE; ++t) {
-        std::string normalName = "coral_normal" + std::to_string(t) + ".png";
+        std::string normalName = "textures/corals/coral_normal" + std::to_string(t) + ".png";
         coralNormalMaps[t] = loadTexture(normalName.c_str());
-        std::string albedoName = "coral_texture" + std::to_string(t) + ".jpg";
+        std::string albedoName = "textures/corals/coral_texture" + std::to_string(t) + ".jpg";
         coralAlbedoMaps[t] = loadTexture(albedoName.c_str());
     }
 
     // Load sand textures for ocean floor
-    GLuint sandNormalTex = loadTexture("sand_normal.png");
-    GLuint sandAlbedoTex = loadTexture("sand_texture.jpg");
+    GLuint sandNormalTex = loadTexture("textures/sand/sand_normal.png");
+    GLuint sandAlbedoTex = loadTexture("textures/sand/sand_texture.jpg");
 
     // Fallback textures: neutral normal (128,128,255) and white albedo
     GLuint fallbackNormal = 0;
@@ -453,6 +453,10 @@ int main() {
 
         // Rysowanie obiektów z użyciem PBR Shadera
         glUseProgram(pbrShader);
+
+        // Ustaw sampler2D na odpowiednie jednostki tekstur (normal -> 0, albedo -> 1)
+        int locNormalMap = glGetUniformLocation(pbrShader, "normalMap"); if (locNormalMap >= 0) glUniform1i(locNormalMap, 0);
+        int locAlbedoMap = glGetUniformLocation(pbrShader, "albedoMap"); if (locAlbedoMap >= 0) glUniform1i(locAlbedoMap, 1);
 
         float modelview[16];
         float projection[16];
