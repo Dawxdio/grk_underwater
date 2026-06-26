@@ -20,6 +20,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "turtle.h"
+#include "rock.h"
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -338,6 +339,14 @@ int main() {
 	unsigned int cubemapTextureID = loadCubemap(faces);
     unsigned int turtleTextureID = loadTexture2D("textures/tutle/body_Base_color.png");
 
+    GLuint rockTexA = loadTexture("textures/the_rock/stone_small_a_albedo.png");
+    GLuint rockTexB = loadTexture("textures/the_rock/stone_small_b_albedo.png");
+    GLuint rockTexC = loadTexture("textures/the_rock/stone_small_c_albedo.png");
+
+    std::vector<Rock> seaFloorRocks;
+    // Generujemy 40 kamieni w obszarze od -25 do 25 (odpowiadającym rozmiarowi siatki)
+    generateRandomRocks(seaFloorRocks, -25.0f, 25.0f, -25.0f, 25.0f, 40);
+
     bool startCoralGrowth = false;
     float coralGrowthFactor = 0.0f; // 0.0 = brak korala, 1.0 = koral w pełni wyrośnięty
     const float GROWTH_SPEED = 0.2f;
@@ -542,6 +551,13 @@ int main() {
         // After drawing floor, disable albedoMap usage for subsequent objects unless set per-object
         glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), 0);
 
+        for (size_t i = 0; i < seaFloorRocks.size(); ++i) {
+            GLuint currentRockTex = rockTexA;
+            if (i % 3 == 1) currentRockTex = rockTexB;
+            if (i % 3 == 2) currentRockTex = rockTexC;
+
+            seaFloorRocks[i].draw(pbrShader, currentRockTex);
+        }
         // Rysowanie ryby po spline
         pathProgress += swimSpeed * deltaTime;
         if (pathProgress > environmentPath.controlPoints.size() - 1) {
