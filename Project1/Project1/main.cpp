@@ -238,7 +238,7 @@ int main() {
 
     // Siatka dla powierzchni wody
     const int GRID_RES = 100;
-    const float SIZE = 50.0f;
+    const float SIZE = 100.0f;
     std::vector<float> verts;
     std::vector<unsigned int> inds;
     verts.reserve((GRID_RES + 1) * (GRID_RES + 1) * 3);

@@ -56,7 +56,7 @@ void generate_ocean_floor()
 	// Kolor piasku przesyłamy tradycyjnie (zakładając, że shader wspiera glColor lub ustawiasz uniform albedo)
 	glColor3f(0.55f, 0.40f, 0.20f);
 
-	const int size = 50;
+	const int size = 100;
 
 	for (int z = -size; z < size; z++)
 	{
