@@ -145,7 +145,7 @@ unsigned int loadTexture2D(const char* path) {
     return textureID;
 }
 
-glm::vec3 sunPos(-24.0f, 30.0f, -60.0f);
+glm::vec3 sunPos(-30.0f, 42.0f, -70.0f);
 const int MAX_CORAL_TYPE = 4;
 
 void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint waterEBO, int waterIndexCount, GLuint turtleTextureID, GLuint sandNormalTex, GLuint sandAlbedoTex, const std::vector<GLuint>& coralNormalMaps, const std::vector<GLuint>& coralAlbedoMaps, float deltaTime, float currentTime, GLuint rockTexA, GLuint rockTexB, GLuint rockTexC, std::vector<Rock>& seaFloorRocks, float coralGrowthFactor, int passnum) {
@@ -345,13 +345,13 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
         int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.7f);
 
         glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer(3, GL_FLOAT, 0, (void*)0);
+        glEnableVertexAttribArray(0); 
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
         glDrawElements(GL_TRIANGLES, waterIndexCount, GL_UNSIGNED_INT, 0);
 
-        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glEnable(GL_CULL_FACE);
@@ -521,8 +521,8 @@ int main() {
 
     Turtle myTurtle;
     float turtleProgress = 0.0f;
-    // Inicjalizacja skyboxa
 
+    // Inicjalizacja skyboxa
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
