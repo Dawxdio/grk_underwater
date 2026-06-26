@@ -1,4 +1,3 @@
 ﻿  main.cpp
-C:\Users\Laptop\Documents\Studia\grk_underwater\Project1\Project1\main.cpp(385,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
-  Project1.vcxproj -> C:\Users\Laptop\Documents\Studia\grk_underwater\Project1\x64\Debug\Project1.exe
-  C:\Users\Laptop\Documents\Studia\grk_underwater\Project1\x64\Debug\Project1.exe: message: wdrażanie zależności
+C:\Users\Kostek\source\repos\grk_underwater\Project1\Project1\main.cpp(395,19): warning C4244: "inicjowanie": konwersja z "double" do "float", możliwa utrata danych
+  Project1.vcxproj -> C:\Users\Kostek\source\repos\grk_underwater\Project1\x64\Debug\Project1.exe

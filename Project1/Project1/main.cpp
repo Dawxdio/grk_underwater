@@ -342,6 +342,7 @@ int main() {
     float coralGrowthFactor = 0.0f; // 0.0 = brak korala, 1.0 = koral w pełni wyrośnięty
     const float GROWTH_SPEED = 0.2f;
 
+
     // Główna pętla renderowania
     while (!glfwWindowShouldClose(window)) {
 
@@ -349,6 +350,15 @@ int main() {
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
+
+        if (startCoralGrowth && coralGrowthFactor < 1.0f) {
+            coralGrowthFactor += GROWTH_SPEED * deltaTime;
+            if (coralGrowthFactor > 1.0f) coralGrowthFactor = 1.0f;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) { //Start growing coral when G is pressed
+            startCoralGrowth = true;
+        }
 
         glEnable(GL_DEPTH_TEST);
 
@@ -501,7 +511,6 @@ int main() {
             if (verticesToDraw == 0 && coralGrowthFactor > 0.001f) {
                 verticesToDraw = VERTICES_PER_CYLINDER;
             }
-            // Zabezpieczenie przed wyjściem poza zakres bufora
             if (verticesToDraw > coral.segmentVertexCount) {
                 verticesToDraw = coral.segmentVertexCount;
             }
@@ -547,9 +556,8 @@ int main() {
             turtleProgress = 0.0f;
         }
 
-        // Podajemy nową ścieżkę jako argument metody update
-        myTurtle.update(turtleProgress, turtlePath); // tutaj używasz nowej trasy, którą zrobiliśmy krok wcześniej
-        myTurtle.draw(pbrShader, turtleTextureID);   // przekazujemy ID tekstury
+        myTurtle.update(turtleProgress, turtlePath);
+        myTurtle.draw(pbrShader, turtleTextureID);
 
         // Rysowanie wody
         if (waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
