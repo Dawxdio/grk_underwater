@@ -279,11 +279,15 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // Generowanie raf koralowych
-    generate_coral_reef(glm::vec2(-5.0f, -5.0f), glm::vec2(5.0f, 5.0f), 0.7f, 4);
-    generate_coral_reef(glm::vec2(-15.0f, -15.0f), glm::vec2(-5.0f, -5.0f), 0.15f, 2);
-    generate_coral_reef(glm::vec2(5.0f, 5.0f), glm::vec2(15.0f, 15.0f), 0.15f, 3);
-    generate_coral_reef(glm::vec2(-15.0f, 5.0f), glm::vec2(-5.0f, 15.0f), 0.15f, 1);
-    generate_coral_reef(glm::vec2(5.0f, -15.0f), glm::vec2(15.0f, -5.0f), 0.15f, 1);
+    generate_coral_reef(glm::vec2(-10.0f, -40.0f), glm::vec2(10.0f, 40.0f), 0.15f, 0);
+
+    generate_coral_reef(glm::vec2(-50.0f, 0.0f), glm::vec2(-10.0f, -40.0f), 0.15f, 1);
+
+    generate_coral_reef(glm::vec2(10.0f, 0.0f), glm::vec2(50.0f, 40.0f), 0.15f, 2);
+
+    generate_coral_reef(glm::vec2(-50.0f, -40.0f), glm::vec2(-10.0f, 0.0f), 0.15f, 3);
+
+    generate_coral_reef(glm::vec2(10.0f, -40.0f), glm::vec2(50.0f, 0.0f), 0.7f, 4);
 
     for (auto& coral : coralReef) {
         buildGpuSegmentsForCoral(coral);
