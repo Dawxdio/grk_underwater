@@ -146,6 +146,220 @@ unsigned int loadTexture2D(const char* path) {
 }
 
 glm::vec3 sunPos(-24.0f, 30.0f, -60.0f);
+const int MAX_CORAL_TYPE = 4;
+
+void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint waterEBO, int waterIndexCount, GLuint turtleTextureID, GLuint sandNormalTex, GLuint sandAlbedoTex, const std::vector<GLuint>& coralNormalMaps, const std::vector<GLuint>& coralAlbedoMaps, float deltaTime, float currentTime, GLuint rockTexA, GLuint rockTexB, GLuint rockTexC, std::vector<Rock>& seaFloorRocks, float coralGrowthFactor, int passnum) {
+
+    static GLuint fallbackNormal = 0;
+    static GLuint fallbackAlbedo = 0;
+    static bool fallbacksInitialized = false;
+
+    if (!fallbacksInitialized) {
+        unsigned char npx[3] = { 128, 128, 255 };
+        glGenTextures(1, &fallbackNormal);
+        glBindTexture(GL_TEXTURE_2D, fallbackNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, npx);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        unsigned char apx[3] = { 255, 255, 255 };
+        glGenTextures(1, &fallbackAlbedo);
+        glBindTexture(GL_TEXTURE_2D, fallbackAlbedo);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, apx);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        fallbacksInitialized = true;
+    }
+
+    static SplinePath environmentPath;
+    static SplinePath turtlePath;
+    static Fish genericFish;
+    static Turtle myTurtle;
+    static float pathProgress = 0.0f;
+    static float turtleProgress = 0.0f;
+    static bool SceneObjectsInitialized = false;
+
+    if (!SceneObjectsInitialized) {
+        environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
+        environmentPath.addPoint(glm::vec3(2.0f, -0.5f, -3.0f));
+        environmentPath.addPoint(glm::vec3(5.0f, -1.0f, -6.0f));
+        environmentPath.addPoint(glm::vec3(2.0f, -2.0f, -9.0f));
+        environmentPath.addPoint(glm::vec3(1.0f, -3.0f, -2.0f));
+        environmentPath.addPoint(glm::vec3(3.0f, -1.5f, 3.0f));
+        environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
+
+        turtlePath.addPoint(glm::vec3(-10.0f, -4.0f, -5.0f));
+        turtlePath.addPoint(glm::vec3(-5.0f, -3.5f, -12.0f));
+        turtlePath.addPoint(glm::vec3(4.0f, -5.0f, -8.0f));
+        turtlePath.addPoint(glm::vec3(8.0f, -3.0f, 2.0f));
+        turtlePath.addPoint(glm::vec3(0.0f, -4.5f, 10.0f));
+        turtlePath.addPoint(glm::vec3(-8.0f, -5.0f, 4.0f));
+        turtlePath.addPoint(glm::vec3(-10.0f, -4.0f, -5.0f));
+
+        SceneObjectsInitialized = true;
+    }
+
+    const float swimSpeed = 0.8f;
+    const float GROWTH_SPEED = 0.2f;
+
+    // Aktualizacja pozycji tylko raz na klatkę (podczas pierwszego przejścia - shadowmapy)
+    if (passnum == 1) {
+        pathProgress += swimSpeed * deltaTime;
+        if (pathProgress > environmentPath.controlPoints.size() - 1) {
+            pathProgress = 0.0f;
+        }
+
+        turtleProgress += (swimSpeed * 0.5f) * deltaTime;
+        if (turtleProgress > turtlePath.controlPoints.size() - 1) {
+            turtleProgress = 0.0f;
+        }
+
+    }
+
+    // Rysowanie korali
+    for (size_t i = 0; i < coralReef.size(); i++) {
+        const auto& coral = coralReef[i];
+        if (coral.segmentVBO == 0) continue;
+
+        int ctype = (coral.coralType >= 0 && coral.coralType <= MAX_CORAL_TYPE) ? coral.coralType : 0;
+        GLuint normalTex = coralNormalMaps[ctype] != 0 ? coralNormalMaps[ctype] : fallbackNormal;
+        GLuint albedoTex = coralAlbedoMaps[ctype] != 0 ? coralAlbedoMaps[ctype] : fallbackAlbedo;
+        bool hasAlbedo = (coralAlbedoMaps[ctype] != 0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, normalTex);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, albedoTex);
+
+        glUniform1i(glGetUniformLocation(mainShader, "useAlbedoMap"), hasAlbedo ? 1 : 0);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, coral.position);
+        model = glm::rotate(model, glm::radians(coral.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(glGetUniformLocation(mainShader, "model"), 1, GL_FALSE, &model[0][0]);
+
+        if (!hasAlbedo) {
+            GLint albedoLoc = glGetUniformLocation(mainShader, "albedo");
+            glUniform3fv(albedoLoc, 1, coral.config.color);
+        }
+
+        glUniform1f(glGetUniformLocation(mainShader, "metallic"), 0.05f);
+        glUniform1f(glGetUniformLocation(mainShader, "roughness"), 0.85f);
+
+        glBindBuffer(GL_ARRAY_BUFFER, coral.segmentVBO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, position));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, normal));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, texCoords));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, tangent));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, bitangent));
+
+        const int VERTICES_PER_CYLINDER = 60;
+        int totalCylinders = coral.segmentVertexCount / VERTICES_PER_CYLINDER;
+        if (totalCylinders < 1) totalCylinders = 1;
+
+        int visibleCylinders = int(totalCylinders * coralGrowthFactor);
+        int verticesToDraw = visibleCylinders * VERTICES_PER_CYLINDER;
+
+        if (verticesToDraw == 0 && coralGrowthFactor > 0.001f) {
+            verticesToDraw = VERTICES_PER_CYLINDER;
+        }
+        if (verticesToDraw > coral.segmentVertexCount) {
+            verticesToDraw = coral.segmentVertexCount;
+        }
+
+        glDrawArrays(GL_TRIANGLES, 0, verticesToDraw);
+
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(3);
+        glDisableVertexAttribArray(4);
+    }
+
+    // Bind sand textures for ocean floor
+    GLuint bindNormal = (sandNormalTex != 0) ? sandNormalTex : fallbackNormal;
+    GLuint bindAlbedo = (sandAlbedoTex != 0) ? sandAlbedoTex : fallbackAlbedo;
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, bindNormal);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, bindAlbedo);
+    glUniform1i(glGetUniformLocation(mainShader, "useAlbedoMap"), 1);
+
+    glm::mat4 floorModel = glm::mat4(1.0f);
+    glUniformMatrix4fv(glGetUniformLocation(mainShader, "model"), 1, GL_FALSE, &floorModel[0][0]);
+
+    draw_ocean_floor();
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fallbackNormal);
+
+    // Rysowanie skał na dnie oceanu
+    for (size_t i = 0; i < seaFloorRocks.size(); ++i) {
+        GLuint currentRockTex = rockTexA;
+        if (i % 3 == 1) currentRockTex = rockTexB;
+        if (i % 3 == 2) currentRockTex = rockTexC;
+
+        glActiveTexture(GL_TEXTURE1);
+        seaFloorRocks[i].draw(mainShader, currentRockTex);
+    }
+    glUniform1i(glGetUniformLocation(mainShader, "useAlbedoMap"), 0);
+
+    // Rysowanie ryby i żółwia na zaktualizowanych ścieżkach
+    glm::vec3 fishPosition = environmentPath.getPosition(pathProgress);
+    glm::vec3 fishDirection = environmentPath.getTangent(pathProgress);
+    genericFish.draw(fishPosition, fishDirection, mainShader);
+
+    myTurtle.update(turtleProgress, turtlePath);
+    myTurtle.draw(mainShader, turtleTextureID);
+
+    // Rysowanie wody
+    if (passnum == 2 && waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
+        glUseProgram(waterShader);
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+        glDisable(GL_CULL_FACE);
+        int locTime = glGetUniformLocation(waterShader, "uTime");
+        if (locTime >= 0) glUniform1f(locTime, currentTime);
+
+        glUniform3f(glGetUniformLocation(waterShader, "uLightDir"), sunPos.x, sunPos.y, sunPos.z);
+        glUniform3fv(glGetUniformLocation(waterShader, "uViewPos"), 1, &cameraPos[0]);
+
+        int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.2f);
+        int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
+        int locSpeed1 = glGetUniformLocation(waterShader, "uSpeed1"); if (locSpeed1 >= 0) glUniform1f(locSpeed1, 0.5f);
+        int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.1f);
+        int locFreq2 = glGetUniformLocation(waterShader, "uFreq2"); if (locFreq2 >= 0) glUniform1f(locFreq2, 0.08f);
+        int locSpeed2 = glGetUniformLocation(waterShader, "uSpeed2"); if (locSpeed2 >= 0) glUniform1f(locSpeed2, 0.9f);
+
+        int locR = glGetUniformLocation(waterShader, "uColR"); if (locR >= 0) glUniform1f(locR, 0.0f);
+        int locG = glGetUniformLocation(waterShader, "uColG"); if (locG >= 0) glUniform1f(locG, 0.4f);
+        int locB = glGetUniformLocation(waterShader, "uColB"); if (locB >= 0) glUniform1f(locB, 0.7f);
+        int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.7f);
+
+        glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glVertexPointer(3, GL_FLOAT, 0, (void*)0);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
+        glDrawElements(GL_TRIANGLES, waterIndexCount, GL_UNSIGNED_INT, 0);
+
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glEnable(GL_CULL_FACE);
+        glUseProgram(0);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+    }
+}
 
 int main() {
     auto programStart = std::chrono::high_resolution_clock::now();
@@ -188,6 +402,12 @@ int main() {
     GLuint skyboxShader = LoadShaders("skybox.vert", "skybox.frag");
     if (skyboxShader == 0) {
         std::cerr << "Blad ladowania shadera skybox!" << std::endl;
+        return -1;
+    }
+
+    GLuint shadowmapShader = LoadShaders("shadow_map.vert", "shadow_map.frag");
+    if (shadowmapShader == 0) {
+        std::cerr << "Blad ladowania shadera shadowmap!" << std::endl;
         return -1;
     }
 
@@ -295,24 +515,6 @@ int main() {
 
     float lastTime = (float)glfwGetTime();
 
-    SplinePath environmentPath;
-    environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
-    environmentPath.addPoint(glm::vec3(2.0f, -0.5f, -3.0f));
-    environmentPath.addPoint(glm::vec3(5.0f, -1.0f, -6.0f));
-    environmentPath.addPoint(glm::vec3(2.0f, -2.0f, -9.0f));
-    environmentPath.addPoint(glm::vec3(1.0f, -3.0f, -2.0f));
-    environmentPath.addPoint(glm::vec3(3.0f, -1.5f, 3.0f));
-    environmentPath.addPoint(glm::vec3(0.0f, -1.0f, 0.0f));
-
-    SplinePath turtlePath;
-    turtlePath.addPoint(glm::vec3(-10.0f, -4.0f, -5.0f));
-    turtlePath.addPoint(glm::vec3(-5.0f, -3.5f, -12.0f));
-    turtlePath.addPoint(glm::vec3(4.0f, -5.0f, -8.0f));
-    turtlePath.addPoint(glm::vec3(8.0f, -3.0f, 2.0f));
-    turtlePath.addPoint(glm::vec3(0.0f, -4.5f, 10.0f));
-    turtlePath.addPoint(glm::vec3(-8.0f, -5.0f, 4.0f));
-    turtlePath.addPoint(glm::vec3(-10.0f, -4.0f, -5.0f));
-
     Fish genericFish;
     float pathProgress = 0.0f;
     float swimSpeed = 0.8f;
@@ -355,7 +557,30 @@ int main() {
     float coralGrowthFactor = 0.0f; // 0.0 = brak korala, 1.0 = koral w pełni wyrośnięty
     const float GROWTH_SPEED = 0.2f;
 
+    // Create FBO and Texture for Shadow Mapping
+    const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
+    unsigned int depthMapFBO;
+    glGenFramebuffers(1, &depthMapFBO);
 
+    unsigned int depthMap;
+    glGenTextures(1, &depthMap);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+        SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	init_ocean_floor();
     // Główna pętla renderowania
     while (!glfwWindowShouldClose(window)) {
 
@@ -363,6 +588,10 @@ int main() {
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
+
+        glm::mat4 lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 100.0f);
+        glm::mat4 lightView = glm::lookAt(sunPos, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
         if (startCoralGrowth && coralGrowthFactor < 1.0f) {
             coralGrowthFactor += GROWTH_SPEED * deltaTime;
@@ -419,6 +648,63 @@ int main() {
         glm::mat4 viewMatrix = getViewMatrix();
         glLoadMatrixf(&viewMatrix[0][0]);
 
+        
+        // Rysowanie obiektów z użyciem PBR Shadera
+        glUseProgram(pbrShader);
+
+        // Ustaw sampler2D na odpowiednie jednostki tekstur (normal -> 0, albedo -> 1)
+        int locNormalMap = glGetUniformLocation(pbrShader, "normalMap"); if (locNormalMap >= 0) glUniform1i(locNormalMap, 0);
+        int locAlbedoMap = glGetUniformLocation(pbrShader, "albedoMap"); if (locAlbedoMap >= 0) glUniform1i(locAlbedoMap, 1);
+
+        glm::vec3 shaderCameraPos = glm::vec3(glm::inverse(viewMatrix)[3]);
+        glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &shaderCameraPos[0]);
+
+        glUniform1f(glGetUniformLocation(pbrShader, "time"), currentTime);
+        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), sunPos.x, sunPos.y, sunPos.z);
+        glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 300.0f, 300.0f, 300.0f);
+        glUniform3f(glGetUniformLocation(pbrShader, "fogColor"), 0.0f, 0.3f, 0.6f);
+        glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
+
+        // PASS 1: Shadow mapping
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glUseProgram(shadowmapShader);
+        glUniformMatrix4fv(glGetUniformLocation(shadowmapShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+        renderScene(shadowmapShader, waterShader, waterVBO, waterEBO, waterIndexCount, turtleTextureID, sandNormalTex, sandAlbedoTex, coralNormalMaps, coralAlbedoMaps, deltaTime, currentTime, rockTexA, rockTexB, rockTexC, seaFloorRocks, coralGrowthFactor, 1);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // PASS 2: Normal Rendering
+        glfwGetFramebufferSize(window, &width, &height);
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glm::mat4 projection = glm::perspective(glm::radians(60.0f), (float)width / (float)height, 0.1f, 100.0f);
+        glm::mat4 view = getViewMatrix();
+
+        glUseProgram(waterShader);
+        glUniformMatrix4fv(glGetUniformLocation(waterShader, "projection"), 1, GL_FALSE, &projection[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(waterShader, "view"), 1, GL_FALSE, &view[0][0]);
+        glm::mat4 waterModel = glm::mat4(1.0f);
+        glUniformMatrix4fv(glGetUniformLocation(waterShader, "model"), 1, GL_FALSE, &waterModel[0][0]);
+
+        glUseProgram(pbrShader);
+        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "projection"), 1, GL_FALSE, &projection[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "view"), 1, GL_FALSE, &view[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+        glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &cameraPos[0]);
+        glUniform3fv(glGetUniformLocation(pbrShader, "lightPos"), 1, &sunPos[0]);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 2);
+
+        renderScene(pbrShader, waterShader, waterVBO, waterEBO, waterIndexCount,
+            turtleTextureID, sandNormalTex, sandAlbedoTex,
+            coralNormalMaps, coralAlbedoMaps, deltaTime, currentTime,
+            rockTexA, rockTexB, rockTexC, seaFloorRocks, coralGrowthFactor, 2);
+        
         // Rysowanie skyboxa
         glDepthFunc(GL_LEQUAL);
         glUseProgram(skyboxShader);
@@ -441,189 +727,6 @@ int main() {
         glDepthFunc(GL_LESS);
         glDepthMask(GL_TRUE);
 
-
-        // Czerwony znacznik
-        glColor3f(1.0f, 0.0f, 0.0f);
-        glBegin(GL_QUADS);
-        glVertex3f(-0.5f, 0.01f, -0.5f);
-        glVertex3f(0.5f, 0.01f, -0.5f);
-        glVertex3f(0.5f, 0.01f, 0.5f);
-        glVertex3f(-0.5f, 0.01f, 0.5f);
-        glEnd();
-
-        // Rysowanie obiektów z użyciem PBR Shadera
-        glUseProgram(pbrShader);
-
-        // Ustaw sampler2D na odpowiednie jednostki tekstur (normal -> 0, albedo -> 1)
-        int locNormalMap = glGetUniformLocation(pbrShader, "normalMap"); if (locNormalMap >= 0) glUniform1i(locNormalMap, 0);
-        int locAlbedoMap = glGetUniformLocation(pbrShader, "albedoMap"); if (locAlbedoMap >= 0) glUniform1i(locAlbedoMap, 1);
-
-        float modelview[16];
-        float projection[16];
-        glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-        glGetFloatv(GL_PROJECTION_MATRIX, projection);
-
-        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "view"), 1, GL_FALSE, modelview);
-        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "projection"), 1, GL_FALSE, projection);
-
-        glm::vec3 shaderCameraPos = glm::vec3(glm::inverse(viewMatrix)[3]);
-        glUniform3fv(glGetUniformLocation(pbrShader, "viewPos"), 1, &shaderCameraPos[0]);
-
-        glUniform1f(glGetUniformLocation(pbrShader, "time"), currentTime);
-        glUniform3f(glGetUniformLocation(pbrShader, "lightPos"), sunPos.x, sunPos.y, sunPos.z);
-        glUniform3f(glGetUniformLocation(pbrShader, "lightColor"), 300.0f, 300.0f, 300.0f);
-        glUniform3f(glGetUniformLocation(pbrShader, "fogColor"), 0.0f, 0.3f, 0.6f);
-        glUniform1f(glGetUniformLocation(pbrShader, "fogDensity"), 0.04f);
-
-        // Rysowanie korali
-        for (size_t i = 0; i < coralReef.size(); i++) {
-            const auto& coral = coralReef[i];
-            if (coral.segmentVBO == 0) continue;
-
-            int ctype = (coral.coralType >= 0 && coral.coralType <= MAX_CORAL_TYPE) ? coral.coralType : 0;
-            GLuint normalTex = coralNormalMaps[ctype] != 0 ? coralNormalMaps[ctype] : fallbackNormal;
-            GLuint albedoTex = coralAlbedoMaps[ctype] != 0 ? coralAlbedoMaps[ctype] : fallbackAlbedo;
-            bool hasAlbedo = (coralAlbedoMaps[ctype] != 0);
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, normalTex);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, albedoTex);
-
-            glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), hasAlbedo ? 1 : 0);
-
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, coral.position);
-            model = glm::rotate(model, glm::radians(coral.rotationY), glm::vec3(0.0f, 1.0f, 0.0f));
-            glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &model[0][0]);
-
-            if (!hasAlbedo) {
-                GLint albedoLoc = glGetUniformLocation(pbrShader, "albedo");
-                glUniform3fv(albedoLoc, 1, coral.config.color);
-            }
-
-            glUniform1f(glGetUniformLocation(pbrShader, "metallic"), 0.05f);
-            glUniform1f(glGetUniformLocation(pbrShader, "roughness"), 0.85f);
-
-            glBindBuffer(GL_ARRAY_BUFFER, coral.segmentVBO);
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, position));
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, normal));
-            glEnableVertexAttribArray(2);
-            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, texCoords));
-            glEnableVertexAttribArray(3);
-            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, tangent));
-            glEnableVertexAttribArray(4);
-            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(PbrVertex), (void*)offsetof(PbrVertex, bitangent));
-
-            const int VERTICES_PER_CYLINDER = 60;
-
-            int totalCylinders = coral.segmentVertexCount / VERTICES_PER_CYLINDER;
-            if (totalCylinders < 1) totalCylinders = 1;
-
-            int visibleCylinders = int(totalCylinders * coralGrowthFactor);
-            int verticesToDraw = visibleCylinders * VERTICES_PER_CYLINDER;
-
-            if (verticesToDraw == 0 && coralGrowthFactor > 0.001f) {
-                verticesToDraw = VERTICES_PER_CYLINDER;
-            }
-            if (verticesToDraw > coral.segmentVertexCount) {
-                verticesToDraw = coral.segmentVertexCount;
-            }
-
-            glDrawArrays(GL_TRIANGLES, 0, verticesToDraw);
-
-            glDisableVertexAttribArray(0);
-            glDisableVertexAttribArray(1);
-            glDisableVertexAttribArray(2);
-            glDisableVertexAttribArray(3);
-            glDisableVertexAttribArray(4);
-        }
-
-        // Bind sand textures for ocean floor (normal->unit0, albedo->unit1)
-        GLuint bindNormal = (sandNormalTex != 0) ? sandNormalTex : fallbackNormal;
-        GLuint bindAlbedo = (sandAlbedoTex != 0) ? sandAlbedoTex : fallbackAlbedo;
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, bindNormal);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, bindAlbedo);
-        // Notify shader to use albedoMap for floor
-        glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), 1);
-
-        glm::mat4 floorModel = glm::mat4(1.0f);
-        glUniformMatrix4fv(glGetUniformLocation(pbrShader, "model"), 1, GL_FALSE, &floorModel[0][0]);
-
-        generate_ocean_floor();
-
-        // After drawing floor, disable albedoMap usage for subsequent objects unless set per-object
-        glUniform1i(glGetUniformLocation(pbrShader, "useAlbedoMap"), 0);
-
-        for (size_t i = 0; i < seaFloorRocks.size(); ++i) {
-            GLuint currentRockTex = rockTexA;
-            if (i % 3 == 1) currentRockTex = rockTexB;
-            if (i % 3 == 2) currentRockTex = rockTexC;
-
-            seaFloorRocks[i].draw(pbrShader, currentRockTex);
-        }
-        // Rysowanie ryby po spline
-        pathProgress += swimSpeed * deltaTime;
-        if (pathProgress > environmentPath.controlPoints.size() - 1) {
-            pathProgress = 0.0f;
-        }
-        glm::vec3 fishPosition = environmentPath.getPosition(pathProgress);
-        glm::vec3 fishDirection = environmentPath.getTangent(pathProgress);
-        genericFish.draw(fishPosition, fishDirection, pbrShader);
-
-        turtleProgress += (swimSpeed * 0.5f) * deltaTime; // Żółw pływa wolniej
-        if (turtleProgress > turtlePath.controlPoints.size() - 1) {
-            turtleProgress = 0.0f;
-        }
-
-        myTurtle.update(turtleProgress, turtlePath);
-        myTurtle.draw(pbrShader, turtleTextureID);
-
-        // Rysowanie wody
-        if (waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glDepthMask(GL_FALSE);
-
-            glUseProgram(waterShader);
-
-            int locTime = glGetUniformLocation(waterShader, "uTime");
-            if (locTime >= 0) glUniform1f(locTime, currentTime);
-
-            glUniform3f(glGetUniformLocation(waterShader, "uLightDir"), sunPos.x, sunPos.y, sunPos.z);
-            glUniform3fv(glGetUniformLocation(waterShader, "uViewPos"), 1, &shaderCameraPos[0]);
-
-            int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.2f);
-            int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
-            int locSpeed1 = glGetUniformLocation(waterShader, "uSpeed1"); if (locSpeed1 >= 0) glUniform1f(locSpeed1, 0.5f);
-            int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.1f);
-            int locFreq2 = glGetUniformLocation(waterShader, "uFreq2"); if (locFreq2 >= 0) glUniform1f(locFreq2, 0.08f);
-            int locSpeed2 = glGetUniformLocation(waterShader, "uSpeed2"); if (locSpeed2 >= 0) glUniform1f(locSpeed2, 0.9f);
-
-            int locR = glGetUniformLocation(waterShader, "uColR"); if (locR >= 0) glUniform1f(locR, 0.0f);
-            int locG = glGetUniformLocation(waterShader, "uColG"); if (locG >= 0) glUniform1f(locG, 0.4f);
-            int locB = glGetUniformLocation(waterShader, "uColB"); if (locB >= 0) glUniform1f(locB, 0.7f);
-            int locA = glGetUniformLocation(waterShader, "uColA"); if (locA >= 0) glUniform1f(locA, 0.7f);
-
-            glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
-            glEnableClientState(GL_VERTEX_ARRAY);
-            glVertexPointer(3, GL_FLOAT, 0, (void*)0);
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
-            glDrawElements(GL_TRIANGLES, waterIndexCount, GL_UNSIGNED_INT, 0);
-
-            glDisableClientState(GL_VERTEX_ARRAY);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-            glUseProgram(0);
-            glDepthMask(GL_TRUE);
-            glDisable(GL_BLEND);
-        }
 
         glUseProgram(0);
 

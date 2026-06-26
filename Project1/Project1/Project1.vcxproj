@@ -166,6 +166,8 @@ opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <None Include="packages.config" />
     <None Include="pbr.frag" />
     <None Include="pbr.vert" />
+    <None Include="shadow_map.frag" />
+    <None Include="shadow_map.vert" />
     <None Include="skybox.frag" />
     <None Include="skybox.vert" />
     <None Include="water.frag" />
