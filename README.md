@@ -14,6 +14,12 @@ Obiekt porusza się po krzywej z orientacją zgodną z trajektorią.
 Spline + orientacja z kwaternionów lub ramek transportu równoległego.
 Ryba, łódź podwodna albo kamera poruszająca się po ścieżce.
 
+Autorzy:
+
+* Konstanty Piasecki 498802
+* Adam Modrzyk 500044
+* Dawid Kujawski 498776
+
 
 
 # Jak odpalić ten projekt

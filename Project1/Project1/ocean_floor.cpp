@@ -65,7 +65,7 @@ void init_ocean_floor() {
     std::vector<FloorVertex> vertices;
     std::vector<unsigned int> indices;
 
-    const int size = 50;
+    const int size = 100;
     int gridRes = size * 2;
 
     for (int z = -size; z <= size; z++) {

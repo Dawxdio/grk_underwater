@@ -325,10 +325,9 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
     if (passnum == 2 && waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
         glUseProgram(waterShader);
 
-        glCullFace(GL_FRONT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_FALSE);
+        glDepthMask(GL_TRUE);
         glDisable(GL_CULL_FACE);
         int locTime = glGetUniformLocation(waterShader, "uTime");
         if (locTime >= 0) glUniform1f(locTime, currentTime);
@@ -727,8 +726,9 @@ int main() {
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
         glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
 
+        glCullFace(GL_BACK);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
+        
         glBindVertexArray(0);
 
         glDepthFunc(GL_LESS);
