@@ -272,7 +272,7 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
         if (verticesToDraw > coral.segmentVertexCount) {
             verticesToDraw = coral.segmentVertexCount;
         }
-
+        glCullFace(GL_FRONT);
         glDrawArrays(GL_TRIANGLES, 0, verticesToDraw);
 
         glDisableVertexAttribArray(0);
@@ -283,6 +283,7 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
     }
 
     // Bind sand textures for ocean floor
+    glCullFace(GL_BACK);
     GLuint bindNormal = (sandNormalTex != 0) ? sandNormalTex : fallbackNormal;
     GLuint bindAlbedo = (sandAlbedoTex != 0) ? sandAlbedoTex : fallbackAlbedo;
     glActiveTexture(GL_TEXTURE0);
@@ -307,14 +308,16 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
 
         glActiveTexture(GL_TEXTURE1);
         seaFloorRocks[i].draw(mainShader, currentRockTex);
+        glCullFace(GL_BACK);
     }
     glUniform1i(glGetUniformLocation(mainShader, "useAlbedoMap"), 0);
 
+    glCullFace(GL_FRONT);
     // Rysowanie ryby i żółwia na zaktualizowanych ścieżkach
     glm::vec3 fishPosition = environmentPath.getPosition(pathProgress);
     glm::vec3 fishDirection = environmentPath.getTangent(pathProgress);
     genericFish.draw(fishPosition, fishDirection, mainShader);
-
+    
     myTurtle.update(turtleProgress, turtlePath);
     myTurtle.draw(mainShader, turtleTextureID);
 
@@ -322,6 +325,7 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
     if (passnum == 2 && waterShader != 0 && waterVBO != 0 && waterEBO != 0) {
         glUseProgram(waterShader);
 
+        glCullFace(GL_FRONT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDepthMask(GL_FALSE);
@@ -499,15 +503,15 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // Generowanie raf koralowych
-    generate_coral_reef(glm::vec2(-10.0f, -40.0f), glm::vec2(10.0f, 40.0f), 0.15f, 0);
+    generate_coral_reef(glm::vec2(-5.0f, -20.0f), glm::vec2(5.0f, 20.0f), 0.15f, 0);
 
-    generate_coral_reef(glm::vec2(-50.0f, 0.0f), glm::vec2(-10.0f, -40.0f), 0.15f, 1);
+    generate_coral_reef(glm::vec2(-25.0f, 0.0f), glm::vec2(-5.0f, -20.0f), 0.15f, 1);
 
-    generate_coral_reef(glm::vec2(10.0f, 0.0f), glm::vec2(50.0f, 40.0f), 0.15f, 2);
+    generate_coral_reef(glm::vec2(5.0f, 0.0f), glm::vec2(25.0f, 20.0f), 0.15f, 2);
 
-    generate_coral_reef(glm::vec2(-50.0f, -40.0f), glm::vec2(-10.0f, 0.0f), 0.15f, 3);
+    generate_coral_reef(glm::vec2(-25.0f, -20.0f), glm::vec2(-5.0f, 0.0f), 0.15f, 3);
 
-    generate_coral_reef(glm::vec2(10.0f, -40.0f), glm::vec2(50.0f, 0.0f), 0.7f, 4);
+    generate_coral_reef(glm::vec2(5.0f, -20.0f), glm::vec2(25.0f, 0.0f), 0.7f, 4);
 
     for (auto& coral : coralReef) {
         buildGpuSegmentsForCoral(coral);
@@ -745,4 +749,4 @@ int main() {
 
     glfwTerminate();
     return 0;
-}
+};
