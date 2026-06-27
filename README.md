@@ -28,3 +28,7 @@ Autorzy:
 2. Dodać zmienną środowiskową o nazwie "SFML\_DIR" oraz z wartością równą ścieżce prowadzącej do folderu glfw-3.4.bin.WIN64 w projekcie (przykład gdyby projekt znajdował się na pulpicie: C:\\Users\\USER\\Desktop\\grk\_underwater\\Project1\\glfw-3.4.bin.WIN64)
 3. Odpalić projekt Project1.slnx znajdujący się w grk\_underwater\\Project1\\Project1.slnx w visual studio i uruchomić go
 
+Po odpaleniu możliwe że będzie trzeba poczekać z 15 sekund aż wszystko się załaduje. Interakcja to wyrośnięcie korali, wystarczy kliknąć G żeby zaczeły rosnąć i F żeby przestały.
+
+<img width="1912" height="1029" alt="image" src="https://github.com/user-attachments/assets/7a52074c-a99a-4f77-b189-19aea9e2e738" />
+
