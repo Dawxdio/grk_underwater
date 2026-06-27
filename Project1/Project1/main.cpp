@@ -336,11 +336,11 @@ void renderScene(GLuint mainShader, GLuint waterShader, GLuint waterVBO, GLuint 
         glUniform3f(glGetUniformLocation(waterShader, "uLightDir"), sunPos.x, sunPos.y, sunPos.z);
         glUniform3fv(glGetUniformLocation(waterShader, "uViewPos"), 1, &cameraPos[0]);
 
-        int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.2f);
-        int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.04f);
+        int locAmp1 = glGetUniformLocation(waterShader, "uAmp1"); if (locAmp1 >= 0) glUniform1f(locAmp1, 0.72f);
+        int locFreq1 = glGetUniformLocation(waterShader, "uFreq1"); if (locFreq1 >= 0) glUniform1f(locFreq1, 0.08f);
         int locSpeed1 = glGetUniformLocation(waterShader, "uSpeed1"); if (locSpeed1 >= 0) glUniform1f(locSpeed1, 0.5f);
-        int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.1f);
-        int locFreq2 = glGetUniformLocation(waterShader, "uFreq2"); if (locFreq2 >= 0) glUniform1f(locFreq2, 0.08f);
+        int locAmp2 = glGetUniformLocation(waterShader, "uAmp2"); if (locAmp2 >= 0) glUniform1f(locAmp2, 0.32f);
+        int locFreq2 = glGetUniformLocation(waterShader, "uFreq2"); if (locFreq2 >= 0) glUniform1f(locFreq2, 0.16f);
         int locSpeed2 = glGetUniformLocation(waterShader, "uSpeed2"); if (locSpeed2 >= 0) glUniform1f(locSpeed2, 0.9f);
 
         int locR = glGetUniformLocation(waterShader, "uColR"); if (locR >= 0) glUniform1f(locR, 0.0f);
@@ -375,7 +375,7 @@ int main() {
         return -1;
     }
 
-    GLFWwindow* window = glfwCreateWindow(640, 480, "Hello OpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1920, 1200, "Underwater scene", NULL, NULL);
     if (!window) {
         glfwTerminate();
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -503,13 +503,13 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // Generowanie raf koralowych
-    generate_coral_reef(glm::vec2(-5.0f, -20.0f), glm::vec2(5.0f, 20.0f), 0.15f, 0);
+    generate_coral_reef(glm::vec2(-5.0f, -20.0f), glm::vec2(5.0f, 20.0f), 0.5f, 0);
 
-    generate_coral_reef(glm::vec2(-25.0f, 0.0f), glm::vec2(-5.0f, -20.0f), 0.15f, 1);
+    generate_coral_reef(glm::vec2(-25.0f, 0.0f), glm::vec2(-5.0f, -20.0f), 0.5f, 1);
 
-    generate_coral_reef(glm::vec2(5.0f, 0.0f), glm::vec2(25.0f, 20.0f), 0.15f, 2);
+    generate_coral_reef(glm::vec2(5.0f, 0.0f), glm::vec2(25.0f, 20.0f), 0.5f, 2);
 
-    generate_coral_reef(glm::vec2(-25.0f, -20.0f), glm::vec2(-5.0f, 0.0f), 0.15f, 3);
+    generate_coral_reef(glm::vec2(-25.0f, -20.0f), glm::vec2(-5.0f, 0.0f), 0.5f, 3);
 
     generate_coral_reef(glm::vec2(5.0f, -20.0f), glm::vec2(25.0f, 0.0f), 0.7f, 4);
 
@@ -559,7 +559,7 @@ int main() {
 
     bool startCoralGrowth = false;
     float coralGrowthFactor = 0.0f; // 0.0 = brak korala, 1.0 = koral w pełni wyrośnięty
-    const float GROWTH_SPEED = 0.2f;
+    const float GROWTH_SPEED = 0.05f;
 
     // Create FBO and Texture for Shadow Mapping
     const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
@@ -604,6 +604,9 @@ int main() {
 
         if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) { //Start growing coral when G is pressed
             startCoralGrowth = true;
+        }
+        if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) { //Stop growing coral when F is pressed
+            startCoralGrowth = false;
         }
 
         glEnable(GL_DEPTH_TEST);
